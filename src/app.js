@@ -1,0 +1,14 @@
+import express from "express";
+import cors from "cors";
+
+const app = express();
+
+//Middlewares
+app.use(cors()); //Para permitir solicitudes desde cualquier origen
+app.use(express.json()); //Para que el servidor pueda entender los datos en formato JSON
+
+app.get("/", (req, res) => {
+    res.send("Bienvenido a la API para el sistema de refuerzos academicos");
+});
+
+export default app;
