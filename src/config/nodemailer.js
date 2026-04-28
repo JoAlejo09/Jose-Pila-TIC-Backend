@@ -14,6 +14,7 @@ let transporter = nodemailer.createTransport({
 });
 
 const enviarEmailConfirmacion = async ({email, nombre, token}) => {
+
 //    const url = `${process.env.FRONTEND_URL}/confirmar/${token}`;//Para frontend
     const url = `http://localhost:4000/api/user/confirmar/${token}`;//Para backend
     let mailOptions = {
@@ -36,6 +37,27 @@ const enviarEmailConfirmacion = async ({email, nombre, token}) => {
     } );
     
 }
-export default enviarEmailConfirmacion
+const enviarEmailRecuperacion = async ({email, nombre, token}) => {
+    const url = `http://localhost:4000/api/user/reset-password/${token}`;
+    let mailOptions = {
+        from: `"Refuerzos Académicos" <no-reply@test.com>`,
+        to: email,
+        subject: "Recuperación de contraseña",
+        html: `<h2>Hola ${nombre}</h2>
+              <p>Has solicitado recuperar tu contraseña.</p>
+              <a href="${url}">Restablecer contraseña</a>
+                <p>Si no solicitaste esto, ignora este mensaje o cambia tu contraseña.</p>
+        `
+    };
+    await transporter.sendMail(mailOptions, function(error, info){
+        if(error){
+            console.error("Error al enviar el correo de confirmación:", error);
+        }else{
+            console.log("Correo de cambio de contraseña enviado: " + info.response);
+        }
+    } );
+    
+}
+export { enviarEmailConfirmacion, enviarEmailRecuperacion };
 
 

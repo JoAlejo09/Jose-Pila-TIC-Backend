@@ -1,5 +1,5 @@
 import Usuario from "../models/Usuario.js";
-import enviarEmailConfirmacion from "../config/nodemailer.js";
+import {enviarEmailConfirmacion, enviarEmailRecuperacion} from "../config/nodemailer.js";
 import generarJWT from "../config/JWT.js";
 
 const registrarUsuario = async (req, res) => {
@@ -118,5 +118,52 @@ const loginUsuario = async (req, res) => {
         res.status(500).json({msg:"Error del servidor"});
     }
 }
-
-export {registrarUsuario, confirmarCuenta, loginUsuario}
+const recuperarContrasena= async(req,res)=>{
+    try{
+        const {email}= req.body;
+        const usuarioEncontrado = await Usuario.findOne({email});
+        if(!usuarioEncontrado){
+            return res.status(400).json({msg:"Usuario no encontrado"});
+        }
+        usuarioEncontrado.generarToken();
+        await usuarioEncontrado.save();
+        await enviarEmailRecuperacion({
+            email: usuarioEncontrado.email,
+            nombre: usuarioEncontrado.nombre,
+            token: usuarioEncontrado.token
+        });
+        res.json({msg:"Se ha enviado un correo con las instrucciones para recuperar tu contraseña"});
+    }catch(error){ 
+        console.error(error);
+        res.status(500).json({msg:"Error del servidor"});
+    }
+}
+const comprobarToken = async(req, res)=>{
+    const {token} = req.params;
+    const usuarioEncontrado = await Usuario.findOne({token});
+    if (!usuarioEncontrado){
+        return res.status(400).json({msg:"Token no válido"});
+    }
+    res.status(200).json({msg:"Token válido, el usuario existe"});
+}
+const crearNuevoPassword = async(req, res)=>{
+    try{
+        const {token} = req.params;
+        const {password, confirmpassword} = req.body;
+        const usuarioEncontrado = await Usuario.findOne({token});
+        if (!usuarioEncontrado){
+            return res.status(400).json({msg:"Token no válido"});
+        }
+        if(password !== confirmpassword){
+            return res.status(400).json({msg:"Las contraseñas no coinciden"});
+        }
+        usuarioEncontrado.password = await usuarioEncontrado.encryptPassword(password);
+        usuarioEncontrado.token = null;
+        await usuarioEncontrado.save();
+        res.status(200).json({msg:"Contraseña actualizada exitosamente"});
+    }catch(error){
+        console.error(error);
+        res.status(500).json({msg:"Error del servidor"});
+    }
+}
+export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword};  
