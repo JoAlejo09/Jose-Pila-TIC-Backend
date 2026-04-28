@@ -1,5 +1,6 @@
 import Usuario from "../models/Usuario.js";
 import enviarEmailConfirmacion from "../config/nodemailer.js";
+import generarJWT from "../config/JWT.js";
 
 const registrarUsuario = async (req, res) => {
     try{
@@ -29,15 +30,17 @@ const registrarUsuario = async (req, res) => {
 
             return res.status(400).json({msg:"El correo electronico ya se encuentra registrado"})
         }
+        //Encriptar password
 
         //Crear nuevo usuario
         const nuevoUsuario = new Usuario({
             nombre,
             apellido,
             email,
-            password,
             rol: rolFinal
         });
+        let nuevoPasswordEncriptado = await nuevoUsuario.encryptPassword(password);
+        nuevoUsuario.password = nuevoPasswordEncriptado;
         let token= nuevoUsuario.generarToken();
 
         await nuevoUsuario.save();
@@ -67,4 +70,53 @@ const confirmarCuenta = async (req, res) =>{
         res.status(500).json({msg:"Error del servidor"});
     }
 }
-export {registrarUsuario, confirmarCuenta}
+const loginUsuario = async (req, res) => {
+    try {
+        const {email, password} = req.body;
+        //Validaciones campos vacios
+        if(!email || !password){
+            return res.status(400).json({msg:"Aun tiene campos vacios. Email y contraseña requeridos"});
+        }
+        //Encontrar usuario
+        const usuarioEncontrado = await Usuario.findOne({email}).select("+password");
+        if(!usuarioEncontrado){
+            return res.status(400).json({msg:"Usuario no encontrado. Registrese para iniciar sesión"});
+        }
+        //Validaciones usuario
+        if(!usuarioEncontrado.isActive){
+            return res.status(403).json({
+                msg:"Tu cuenta esta deshabilitada"
+            });
+        }
+        if(!usuarioEncontrado.isVerified){
+            return res.status(403).json({
+                msg:"Tu cuenta no ha sido verificada. Por favor, revisa tu correo para confirmar tu cuenta."
+            });
+        }
+        //Validar contraseña
+        const passwordValida = await usuarioEncontrado.matchPassword(password);
+        if(!passwordValida){
+            return res.status(400).json({msg:"Contraseña incorrecta"});
+        }
+        //Generacion del token JWT
+        const token = generarJWT({id: usuarioEncontrado._id, email: usuarioEncontrado.email, rol: usuarioEncontrado.rol});
+
+        res.status(200).json({msg:"Inicio de sesión exitoso",
+            token,
+            usuario:{
+                id: usuarioEncontrado._id,
+                nombre: usuarioEncontrado.nombre,
+                apellido: usuarioEncontrado.apellido,
+                email: usuarioEncontrado.email,
+                rol: usuarioEncontrado.rol
+            }
+        });
+
+        
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({msg:"Error del servidor"});
+    }
+}
+
+export {registrarUsuario, confirmarCuenta, loginUsuario}
