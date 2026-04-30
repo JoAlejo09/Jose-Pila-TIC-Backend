@@ -62,8 +62,10 @@ const confirmarCuenta = async (req, res) =>{
         }
         usuarioEncontrado.isVerified = true;
         usuarioEncontrado.token = null;
+
         await usuarioEncontrado.save();
-        res.status(200).json({msg:"Cuenta confirmada exitosamente"});
+
+        res.status(200).json({msg:"Cuenta confirmada correctamente"});
     }
     catch(error){  
         console.error(error);
@@ -103,7 +105,7 @@ const loginUsuario = async (req, res) => {
 
         res.status(200).json({msg:"Inicio de sesión exitoso",
             token,
-            usuario:{
+            user:{
                 id: usuarioEncontrado._id,
                 nombre: usuarioEncontrado.nombre,
                 apellido: usuarioEncontrado.apellido,
@@ -150,6 +152,9 @@ const crearNuevoPassword = async(req, res)=>{
     try{
         const {token} = req.params;
         const {password, confirmpassword} = req.body;
+        console.log(token);
+        console.log(password);
+        console.log(confirmpassword)
         const usuarioEncontrado = await Usuario.findOne({token});
         if (!usuarioEncontrado){
             return res.status(400).json({msg:"Token no válido"});

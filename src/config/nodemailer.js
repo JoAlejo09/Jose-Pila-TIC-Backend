@@ -15,8 +15,8 @@ let transporter = nodemailer.createTransport({
 
 const enviarEmailConfirmacion = async ({email, nombre, token}) => {
 
-//    const url = `${process.env.FRONTEND_URL}/confirmar/${token}`;//Para frontend
-    const url = `http://localhost:4000/api/user/confirmar/${token}`;//Para backend
+    const url = `${process.env.FRONTEND_URL}/confirmar/${token}`;//Para frontend
+//    const url = `http://localhost:4000/api/user/confirmar/${token}`;//Para backend
     let mailOptions = {
         from: `"Refuerzos Académicos" <no-reply@test.com>`,
         to: email,
@@ -38,7 +38,8 @@ const enviarEmailConfirmacion = async ({email, nombre, token}) => {
     
 }
 const enviarEmailRecuperacion = async ({email, nombre, token}) => {
-    const url = `http://localhost:4000/api/user/reset-password/${token}`;
+//    const url = `http://localhost:4000/api/user/reset-password/${token}`;
+    const url = `${process.env.FRONTEND_URL}/reset-password/${token}`;
     let mailOptions = {
         from: `"Refuerzos Académicos" <no-reply@test.com>`,
         to: email,
