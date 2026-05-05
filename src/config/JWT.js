@@ -8,7 +8,7 @@ const generarJWT =(usuario) =>{
         rol: usuario.rol
     },
     process.env.JWT_SECRET_KEY,{
-        expiresIn: "200s"
+        expiresIn: "1h"
     });
 }
 export default generarJWT;

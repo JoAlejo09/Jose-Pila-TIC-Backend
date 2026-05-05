@@ -171,4 +171,116 @@ const crearNuevoPassword = async(req, res)=>{
         res.status(500).json({msg:"Error del servidor"});
     }
 }
-export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword};  
+
+/*ACCIONES PARA ADMIN */
+const obtenerUsuarios = async(req,res)=>{
+  try {
+    const { search } = req.query;
+
+    let filtro = {};
+
+    if (search) {
+      filtro = {
+        $or: [
+          { nombre: { $regex: search, $options: "i" } },
+          { apellido: { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      };
+    }
+
+    const usuarios = await Usuario.find(filtro)
+      .select("-password -token");
+
+    res.json(usuarios);
+
+  } catch (error) {
+    res.status(500).json({ msg: "Error al obtener usuarios" });
+  }
+};
+const crearUsuario = async (req, res) => {
+  try {
+    const { nombre, apellido, email, password, rol } = req.body;
+
+    if (!nombre || !apellido || !email || !password) {
+      return res.status(400).json({ msg: "Campos obligatorios" });
+    }
+
+    const existe = await Usuario.findOne({ email });
+    if (existe) {
+      return res.status(400).json({ msg: "El usuario ya está registrado" });
+    }
+
+    const rolesValidos = ["admin", "tutor", "estudiante"];
+    const rolFinal = rolesValidos.includes(rol) ? rol : "estudiante";
+
+    const usuario = new Usuario({
+      nombre,
+      apellido,
+      email,
+      rol: rolFinal,
+      isVerified: false // importante
+    });
+
+    usuario.password = await usuario.encryptPassword(password);
+
+    usuario.generarToken();
+
+    await usuario.save();
+
+    await enviarEmailConfirmacion({
+      email: usuario.email,
+      nombre: usuario.nombre,
+      token: usuario.token
+    });
+
+    res.status(201).json({
+      msg: "Usuario creado. Debe confirmar su cuenta desde el correo"
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ msg: "Error al crear usuario" });
+  }
+}
+const actualizarUsuario = async(req,res)=>{
+    try{
+        const {id} = req.params;
+        const { nombre, apellido, email, rol, password } = req.body;
+
+        const usuario = await Usuario.findById(id);
+        if(!usuario){
+            return res.status(404).json({msg:"Usuario no encontrado"});
+        }
+        if(nombre) usuario.nombre = nombre;
+        if(apellido) usuario.apellido = apellido;
+        if(email) usuario.email = email;
+        
+        if(rol && req.usuario.rol == "admin"){
+            usuario.rol = rol;
+        }
+        if(password){
+            usuario.password = await usuario.encryptPassword(password)
+        }
+        await usuario.save();
+        res.status(201).json({msg:"Usuario actualizado correctamente"})
+    }catch(error){
+        res.status(500).json({msg:"Error al actualizar el Usuario"})
+    }
+}
+const desactivarUsuario = async(req,res)=>{
+    try{
+        const {id} = req.params;
+        const usuario = await Usuario.findById(id);
+        if(!usuario){
+            return res.status(404).json({msg:"Usuario no encontrado"})
+        }
+        usuario.isActive = false;
+        await usuario.save();
+        res.status(201).json({msg:"Usuario desactivado"});
+    }catch(error){
+        res.status(500).json({msg:"Error al desactivar usuario"});
+    }
+};
+export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword,
+        obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario};  

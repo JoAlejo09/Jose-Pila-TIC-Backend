@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import userRoutes from "./routes/user_routes.js";
+import authRoutes from "./routes/auth_routes.js";
 
 const app = express();
 
@@ -12,6 +13,8 @@ app.get("/", (req, res) => {
     res.send("Bienvenido a la API para el sistema de refuerzos academicos");
 });
 //Rutas
+app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
+
 
 export default app;
