@@ -1,6 +1,7 @@
 import Usuario from "../models/Usuario.js";
 import {enviarEmailConfirmacion, enviarEmailRecuperacion} from "../config/nodemailer.js";
 import generarJWT from "../config/JWT.js";
+import { trusted } from "mongoose";
 
 const registrarUsuario = async (req, res) => {
     try{
@@ -219,23 +220,16 @@ const crearUsuario = async (req, res) => {
       apellido,
       email,
       rol: rolFinal,
-      isVerified: false // importante
     });
 
     usuario.password = await usuario.encryptPassword(password);
-
-    usuario.generarToken();
+    usuario.token = null;
+    usuario.isVerified = true;
 
     await usuario.save();
 
-    await enviarEmailConfirmacion({
-      email: usuario.email,
-      nombre: usuario.nombre,
-      token: usuario.token
-    });
-
     res.status(201).json({
-      msg: "Usuario creado. Debe confirmar su cuenta desde el correo"
+      msg: "Usuario creado."
     });
 
   } catch (error) {
@@ -282,5 +276,19 @@ const desactivarUsuario = async(req,res)=>{
         res.status(500).json({msg:"Error al desactivar usuario"});
     }
 };
+const activarUsuario = async(req,res)=>{
+    try{
+        const {id} = req.params;
+        const usuario = await Usuario.findById(id);
+        if(!usuario){
+            return res.status(404).json({msg:"Usuario no encontrado"})
+        }
+        usuario.isActive = true;
+        await usuario.save();
+        res.status(201).json({msg:"Usuario Activado"});
+    }catch(error){
+        res.status(500).json({msg:"Error al activar usuario"});
+    }
+};
 export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword,
-        obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario};  
+        obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario,activarUsuario};  
