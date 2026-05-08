@@ -1,4 +1,6 @@
 import Usuario from "../models/Usuario.js";
+import Estudiante from "../models/Estudiante.js";
+import Tutor from "../models/Tutor.js";
 import {enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion} from "../config/nodemailer.js";
 import generarJWT from "../config/JWT.js";
 
@@ -42,10 +44,20 @@ const registrarUsuario = async (req, res) => {
         let nuevoPasswordEncriptado = await nuevoUsuario.encryptPassword(password);
         nuevoUsuario.password = nuevoPasswordEncriptado;
         let token= nuevoUsuario.generarToken();
-
         await nuevoUsuario.save();
         //Confirmacion de cuenta
         await enviarEmailConfirmacion({email: nuevoUsuario.email, nombre:nuevoUsuario.nombre, token:nuevoUsuario.token})
+        //Crear perfil segun rol
+        if(nuevoUsuario.rol === "estudiante"){
+            await Estudiante.create({
+                usuario: nuevoUsuario._id
+            });
+        }
+        if(nuevoUsuario.rol === "tutor"){
+            await Tutor.create({
+                usuario: nuevoUsuario._id
+            });
+        }
         res.status(201).json({msg:"Usuario registrado exitosamente. Por favor, revisa tu correo para confirmar tu cuenta."});
     }catch(error){
         console.error(error);
