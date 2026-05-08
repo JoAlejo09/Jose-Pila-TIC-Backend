@@ -59,6 +59,37 @@ const enviarEmailRecuperacion = async ({email, nombre, token}) => {
     } );
     
 }
-export { enviarEmailConfirmacion, enviarEmailRecuperacion };
+const enviarEmailReactivacion = async({email, nombre, passwordTemporal}) =>{
+    const url =`${process.env.FRONTEND_URL}/nuevo-password`;
+    let mailOptions ={
+        from: `"Refuerzos Académicos" <no-reply@test.com>`,
+        to: email,
+        subject: "Recuperación de contraseña",
+         html: `
+            <h2>Hola ${nombre}</h2>
+            <p>
+                Tu cuenta ha sido reactivada correctamente.
+            </p>
+            <p>
+                Tu nueva contraseña temporal es:
+            </p>
+            <h3>${passwordTemporal}</h3>
+            <p>
+                Por seguridad, deberás cambiar
+                esta contraseña al iniciar sesión.
+            </p>
+            <p>
+                Si no solicitaste esta acción,
+                contacta con el administrador.
+            </p>`
+    }
+     await transporter.sendMail(mailOptions, function(error, info){
+        if(error){
+            console.error("Error al enviar el correo de reactivacion:", error);
+        }else{
+            console.log("Correo de reactivación enviado: " + info.response);
+        }
+    } );
 
-
+}
+export { enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion };

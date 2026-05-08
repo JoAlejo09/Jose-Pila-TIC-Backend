@@ -1,7 +1,6 @@
 import Usuario from "../models/Usuario.js";
-import {enviarEmailConfirmacion, enviarEmailRecuperacion} from "../config/nodemailer.js";
+import {enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion} from "../config/nodemailer.js";
 import generarJWT from "../config/JWT.js";
-import { trusted } from "mongoose";
 
 const registrarUsuario = async (req, res) => {
     try{
@@ -75,51 +74,51 @@ const confirmarCuenta = async (req, res) =>{
 }
 const loginUsuario = async (req, res) => {
     try {
-        const {email, password} = req.body;
-        //Validaciones campos vacios
-        if(!email || !password){
-            return res.status(400).json({msg:"Aun tiene campos vacios. Email y contraseña requeridos"});
+        const { email, password } = req.body;
+        if (!email || !password) {
+            return res.status(400).json({msg: "Aun tiene campos vacios. Email y contraseña requeridos"});
         }
-        //Encontrar usuario
-        const usuarioEncontrado = await Usuario.findOne({email}).select("+password");
-        if(!usuarioEncontrado){
-            return res.status(400).json({msg:"Usuario no encontrado. Registrese para iniciar sesión"});
+        const usuarioEncontrado =await Usuario.findOne({ email }).select("+password");
+        if (!usuarioEncontrado) {
+            return res.status(400).json({msg: "Usuario no encontrado. Registrese para iniciar sesión"});
         }
-        //Validaciones usuario
-        if(!usuarioEncontrado.isActive){
+        if (!usuarioEncontrado.isActive) {
+            return res.status(403).json({msg: "Tu cuenta esta deshabilitada"});
+        }
+        if (!usuarioEncontrado.isVerified) {
             return res.status(403).json({
-                msg:"Tu cuenta esta deshabilitada"
+                msg: "Tu cuenta no ha sido verificada. Por favor, revisa tu correo para confirmar tu cuenta.",
+                noVerificada: true,
+                email: usuarioEncontrado.email
             });
         }
-        if(!usuarioEncontrado.isVerified){
-            return res.status(403).json({
-                msg:"Tu cuenta no ha sido verificada. Por favor, revisa tu correo para confirmar tu cuenta."
-            });
-        }
-        //Validar contraseña
         const passwordValida = await usuarioEncontrado.matchPassword(password);
-        if(!passwordValida){
-            return res.status(400).json({msg:"Contraseña incorrecta"});
+        if (!passwordValida) {
+            return res.status(400).json({msg: "Contraseña incorrecta"});
         }
-        //Generacion del token JWT
-        const token = generarJWT({id: usuarioEncontrado._id, email: usuarioEncontrado.email, rol: usuarioEncontrado.rol});
-
-        res.status(200).json({msg:"Inicio de sesión exitoso",
+        const token = generarJWT({
+            id: usuarioEncontrado._id,
+            email: usuarioEncontrado.email,
+            rol: usuarioEncontrado.rol
+        });
+        res.status(200).json({
+            msg: "Inicio de sesión exitoso",
             token,
-            user:{
+            user: {
                 id: usuarioEncontrado._id,
                 nombre: usuarioEncontrado.nombre,
                 apellido: usuarioEncontrado.apellido,
                 email: usuarioEncontrado.email,
                 rol: usuarioEncontrado.rol
-            }
+            },
+            debeCambiarPassword:
+                usuarioEncontrado.debeCambiarPassword
         });
-
-        
     } catch (error) {
         console.error(error);
-        res.status(500).json({msg:"Error del servidor"});
+        res.status(500).json({msg: "Error del servidor"});
     }
+
 }
 const recuperarContrasena= async(req,res)=>{
     try{
@@ -169,6 +168,64 @@ const crearNuevoPassword = async(req, res)=>{
         res.status(200).json({msg:"Contraseña actualizada exitosamente"});
     }catch(error){
         console.error(error);
+        res.status(500).json({msg:"Error del servidor"});
+    }
+}
+const reenviarConfirmacion = async(req,res)=>{
+    try {
+        const {email} = req.body;
+        if(!email){
+            return res.status(400).json({
+                msg:"Email requerido"
+            });
+        }
+        const usuario = await Usuario.findOne({email});
+        if(!usuario){
+            return res.status(400).json({
+                msg:"Usuario no encontrado"
+            })
+        }
+        if(usuario.isVerified){
+            return res.status(400).json({
+                msg:"La cuenta ya esta verificada"
+            });
+        }
+        usuario.token = usuario.generarToken();
+        await usuario.save();
+        await enviarEmailConfirmacion({
+            email: usuario.email,
+            nombre: usuario.nombre,
+            token: usuario.token
+        })
+         res.status(200).json({
+            msg:"Correo reenviado correctamente"
+        });
+    } catch (error) {
+        console.error(error);
+         res.status(500).json({
+            msg:"Error del servidor"
+        });
+    }
+}
+const cambiarPasswordObligatorio = async(req,res)=>{
+    try{
+        const usuario = await Usuario.findById(req.usuario.id).select("+password");
+        if(!usuario){
+            return res.status(404).json({msg:"Usuario no encontrado"});
+        }
+        const {password, confirmpassword} = req.body;
+        if(!password || !confirmpassword){
+            return res.status(400).json({msg:"Todos los campos son obligatorios"});
+        }
+        if(password !== confirmpassword){
+            return res.status(400).json({msg:"Las contraseñas no coinciden"});
+        }
+        usuario.password = await usuario.encryptPassword(password);
+        usuario.debeCambiarPassword = false;
+        await usuario.save();
+        res.status(200).json({msg:"Contraseña actualizada correctamente"});
+    }catch(error){
+        console.log(error);
         res.status(500).json({msg:"Error del servidor"});
     }
 }
@@ -238,29 +295,66 @@ const crearUsuario = async (req, res) => {
   }
 }
 const actualizarUsuario = async(req,res)=>{
-    try{
-        const {id} = req.params;
-        const { nombre, apellido, email, rol, password } = req.body;
 
+    try{
+
+        const {id} = req.params;
+
+        const {
+            nombre,
+            apellido,
+            email,
+            rol,
+            password
+        } = req.body;
+        console.log(id);
+        console.log(req.usuario);
         const usuario = await Usuario.findById(id);
+
         if(!usuario){
-            return res.status(404).json({msg:"Usuario no encontrado"});
+
+            return res.status(404).json({
+                msg:"Usuario no encontrado"
+            });
+
         }
+
         if(nombre) usuario.nombre = nombre;
+
         if(apellido) usuario.apellido = apellido;
+
         if(email) usuario.email = email;
-        
-        if(rol && req.usuario.rol == "admin"){
+
+        //if(rol && req.usuario.rol == "admin"){
+        if(rol){
+
             usuario.rol = rol;
+
         }
-        if(password){
-            usuario.password = await usuario.encryptPassword(password)
+
+        if(password && password.trim() !== ""){
+
+            usuario.password =
+                await usuario.encryptPassword(password);
+
         }
+
         await usuario.save();
-        res.status(201).json({msg:"Usuario actualizado correctamente"})
+
+        res.status(200).json({
+            msg:"Usuario actualizado correctamente"
+        });
+
     }catch(error){
-        res.status(500).json({msg:"Error al actualizar el Usuario"})
+
+        console.log(error);
+
+        res.status(500).json({
+            msg:"Error al actualizar el Usuario"
+        });
+
     }
+
 }
 const desactivarUsuario = async(req,res)=>{
     try{
@@ -281,14 +375,29 @@ const activarUsuario = async(req,res)=>{
         const {id} = req.params;
         const usuario = await Usuario.findById(id);
         if(!usuario){
-            return res.status(404).json({msg:"Usuario no encontrado"})
+            return res.status(400).json({msg:"Usuario no encontrado"});
         }
+        const passwordTemporal = Math.random().toString(36).slice(-8);
+        console.log(passwordTemporal);
+
+        usuario.password = await usuario.encryptPassword(passwordTemporal);
         usuario.isActive = true;
+        usuario.debeCambiarPassword = true;
         await usuario.save();
-        res.status(201).json({msg:"Usuario Activado"});
+        await enviarEmailReactivacion({
+            email: usuario.email,
+            nombre: usuario.nombre,
+            passwordTemporal
+        })
+        res.status(200).json({
+            msg:"Usuario activado correctamente"
+        })
     }catch(error){
-        res.status(500).json({msg:"Error al activar usuario"});
+        console.log(error);
+        res.status(500).json({
+            msg:"Error al activar usuario"
+        });
     }
 };
-export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword,
-        obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario,activarUsuario};  
+export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword, reenviarConfirmacion,
+        cambiarPasswordObligatorio, obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario,activarUsuario};  

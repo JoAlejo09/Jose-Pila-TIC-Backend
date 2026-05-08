@@ -1,5 +1,7 @@
 import { Router } from "express";
-import { registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken,  crearNuevoPassword} from "../controllers/user_controller.js";
+import { verificarJWT } from "../middlewares/auth_middleware.js";
+import { registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken,  crearNuevoPassword,
+    reenviarConfirmacion, cambiarPasswordObligatorio } from "../controllers/user_controller.js";
 const router = Router();
 //Rutas publicas
 router.post("/registrar", registrarUsuario);
@@ -8,5 +10,11 @@ router.post("/login", loginUsuario);
 router.post ("/recuperar", recuperarContrasena);
 router.get("/recuperar/:token", comprobarToken);
 router.post("/recuperar/:token", crearNuevoPassword);
+router.post("/reenviar-confirmacion",reenviarConfirmacion);
+router.patch(
+   "/cambiar-password",
+   verificarJWT,
+   cambiarPasswordObligatorio
+);
 
 export default router;

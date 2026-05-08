@@ -41,6 +41,10 @@ const usuarioSchema = new mongoose.Schema(
         },
         token: {
             type: String,
+        },
+        debeCambiarPassword:{
+            type:Boolean,
+            default:false
         }   
     },
     {timestamps: true}

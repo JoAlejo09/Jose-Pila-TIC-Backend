@@ -12,4 +12,5 @@ router.put("/:id", actualizarUsuario);
 router.patch("/:id/desactivar", desactivarUsuario)
 router.patch("/:id/activar",activarUsuario)
 
+
 export default router;
