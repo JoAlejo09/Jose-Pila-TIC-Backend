@@ -3,6 +3,7 @@ import Estudiante from "../models/Estudiante.js";
 import Tutor from "../models/Tutor.js";
 import {enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion} from "../config/nodemailer.js";
 import generarJWT from "../config/JWT.js";
+import { DEFAULT_PROFILE_IMAGE } from "../config/defaults.js";
 
 const registrarUsuario = async (req, res) => {
     try{
@@ -50,12 +51,14 @@ const registrarUsuario = async (req, res) => {
         //Crear perfil segun rol
         if(nuevoUsuario.rol === "estudiante"){
             await Estudiante.create({
-                usuario: nuevoUsuario._id
+                usuario: nuevoUsuario._id,
+                fotoPerfil: DEFAULT_PROFILE_IMAGE
             });
         }
         if(nuevoUsuario.rol === "tutor"){
             await Tutor.create({
-                usuario: nuevoUsuario._id
+                usuario: nuevoUsuario._id,
+                fotoPerfil: DEFAULT_PROFILE_IMAGE
             });
         }
         res.status(201).json({msg:"Usuario registrado exitosamente. Por favor, revisa tu correo para confirmar tu cuenta."});

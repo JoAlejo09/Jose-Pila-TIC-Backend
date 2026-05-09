@@ -16,7 +16,7 @@ app.get("/", (req, res) => {
 //Rutas
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
-app.use("/api/perfil", perfilRoutes);
+app.use("/api/profile", perfilRoutes);
 
 
 export default app;

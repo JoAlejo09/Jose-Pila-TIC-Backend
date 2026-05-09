@@ -46,7 +46,7 @@ const actualizarPerfil = async(req,res)=>{
 
         let perfil = null;
         if(usuario.rol === "estudiante"){
-            perfil = Estudiante.findOne({
+            perfil = await Estudiante.findOne({
                 usuario: usuario._id
             });
         if(!perfil){ return res.status(404).json({msg:"Perfil estudiante no encontrado"})};
@@ -90,5 +90,15 @@ const actualizarPerfil = async(req,res)=>{
         });        
     }
 }
+/*const actualizarFotoPerfil = async(req,res)=>{
+    try {
+        const usuario = await Usuario.findById(req.usuario.id);
+        if(!usuario){
+            return res.status(404).json({msg:"Usuario no encontrado"});
+        }
 
+    } catch (error) {
+        
+    }
+}*/
 export {obtenerPerfil, actualizarPerfil};
