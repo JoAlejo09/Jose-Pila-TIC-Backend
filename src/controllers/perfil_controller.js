@@ -1,6 +1,7 @@
 import Usuario from "../models/Usuario.js";
 import Estudiante from "../models/Estudiante.js";
 import Tutor from "../models/Tutor.js";
+import cloudinary from "../config/cloudinary.js"
 
 const obtenerPerfil= async (req, res)=>{
     try {
@@ -90,15 +91,62 @@ const actualizarPerfil = async(req,res)=>{
         });        
     }
 }
-/*const actualizarFotoPerfil = async(req,res)=>{
+const actualizarFotoPerfil = async(req,res)=>{
     try {
         const usuario = await Usuario.findById(req.usuario.id);
         if(!usuario){
             return res.status(404).json({msg:"Usuario no encontrado"});
         }
+        if(!req.file){
+            return res.status(400).json({
+                msg:"No se envio la imagen."
+            });
+        }
+        const resultado = await cloudinary.uploader.upload(
+            req.file.path,
+            {
+                folder:"perfiles",
+                transformation:[
+                    {
+                        width:300,
+                        height:300,
+                        crop:"fill",
+                        quality:"auto",
+                        fetch_format:"auto"
+                    }
+                ]
+            }
+        );
+        let perfil = null;
+        if(usuario.rol === "estudiante"){
+            perfil = await Estudiante.findOne({
+                usuario: usuario._id
+            });
+        }
+        if(usuario.rol === "tutor"){
+            perfil = await Tutor.findOne({
+                usuario: usuario._id
+              });
+        }
+        if(!perfil){
+            return res.status(404).json({
+                msg:"Perfil no encontrado"
+            })
+        }
+        perfil.fotoPerfil = resultado.secure_url;
+        await perfil.save();
+
+        res.status(200).json({
+            msg:"Foto actualizada correctamente",
+            fotoPerfil: resultado.secure_url
+        });
 
     } catch (error) {
-        
+        console.log(error);
+
+        res.status(500).json({
+            msg:"Error al actualizar foto"
+        });
     }
-}*/
-export {obtenerPerfil, actualizarPerfil};
+}
+export {obtenerPerfil, actualizarPerfil, actualizarFotoPerfil};

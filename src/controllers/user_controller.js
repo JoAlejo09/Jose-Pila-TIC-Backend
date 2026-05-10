@@ -116,6 +116,18 @@ const loginUsuario = async (req, res) => {
             email: usuarioEncontrado.email,
             rol: usuarioEncontrado.rol
         });
+        let fotoPerfil = null;
+        if(usuarioEncontrado.rol === "estudiante"){
+            const perfil = await Estudiante.findOne({
+                usuario: usuarioEncontrado._id});
+            fotoPerfil = perfil?.fotoPerfil;
+        }
+        if(usuarioEncontrado.rol === "tutor"){
+            const perfil = await Tutor.findOne({
+                usuario: usuarioEncontrado._id
+        });
+        fotoPerfil = perfil?.fotoPerfil;
+    }
         res.status(200).json({
             msg: "Inicio de sesión exitoso",
             token,
@@ -124,7 +136,8 @@ const loginUsuario = async (req, res) => {
                 nombre: usuarioEncontrado.nombre,
                 apellido: usuarioEncontrado.apellido,
                 email: usuarioEncontrado.email,
-                rol: usuarioEncontrado.rol
+                rol: usuarioEncontrado.rol,
+                fotoPerfil
             },
             debeCambiarPassword:
                 usuarioEncontrado.debeCambiarPassword
