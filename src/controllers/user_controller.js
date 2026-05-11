@@ -6,67 +6,99 @@ import generarJWT from "../config/JWT.js";
 import { DEFAULT_PROFILE_IMAGE } from "../config/defaults.js";
 
 const registrarUsuario = async (req, res) => {
+
     try{
-        const {nombre, apellido, email, password, confirmpassword, rol } = req.body;
-        //Validaciones
-        if(!nombre || !apellido || !email || !password || !confirmpassword){
-            return res.status(400).json({msg: "Algunos campos estan vacios. Son obligatorios"});
+        const {nombre, apellido, email, password, confirmpassword, rol, anioEscolar} = req.body;
+
+        // VALIDACIONES
+        if( !nombre || !apellido || !email || !password || !confirmpassword){
+            return res.status(400).json({
+                msg: "Algunos campos estan vacios. Son obligatorios"
+            });
         }
-        //Validacion de contraseñas
+        // VALIDACION PASSWORDS
         if(password !== confirmpassword){
-            return res.status(400).json({msg:"Las contraseñas no coinciden"});
+            return res.status(400).json({
+                msg:"Las contraseñas no coinciden"
+            });
         }
         if(password.length < 6){
-            return res.status(400).json({msg:"La contraseña debe tener mínimo 6 caracteres"});
+            return res.status(400).json({
+                msg:"La contraseña debe tener mínimo 6 caracteres"
+            });
         }
+        // VALIDACION EMAIL
         if(!email.includes("@")){
-            return res.status(400).json({msg:"El email no es válido"});
+            return res.status(400).json({
+                msg:"El email no es válido"
+            });
         }
-        //Validacion de rol
+        // VALIDACION ROL
         let rolFinal = "estudiante";
         if (rol === "tutor") {
             rolFinal = "tutor";
         }
-        //Existe el usuario
+        // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
+        if(rolFinal === "estudiante" && !anioEscolar){
+            return res.status(400).json({msg:"El año escolar es obligatorio"});
+        }
+
+        const aniosValidos = ["primero", "segundo", "tercero"];
+
+        if(rolFinal === "estudiante" && anioEscolar && !aniosValidos.includes(anioEscolar)){
+            return res.status(400).json({
+                msg:"Año escolar no válido"
+            });
+        }
+        // VALIDAR USUARIO EXISTENTE
         const usuarioExiste = await Usuario.findOne({email});
         if(usuarioExiste){
-
-            return res.status(400).json({msg:"El correo electronico ya se encuentra registrado"})
+            return res.status(400).json({
+                msg:"El correo electronico ya se encuentra registrado."});
         }
-        //Encriptar password
-
-        //Crear nuevo usuario
+        // CREAR USUARIO
         const nuevoUsuario = new Usuario({
             nombre,
             apellido,
             email,
             rol: rolFinal
         });
+        // ENCRIPTAR PASSWORD
         let nuevoPasswordEncriptado = await nuevoUsuario.encryptPassword(password);
         nuevoUsuario.password = nuevoPasswordEncriptado;
-        let token= nuevoUsuario.generarToken();
+        // TOKEN
+        nuevoUsuario.generarToken();
+        // GUARDAR USUARIO
         await nuevoUsuario.save();
-        //Confirmacion de cuenta
-        await enviarEmailConfirmacion({email: nuevoUsuario.email, nombre:nuevoUsuario.nombre, token:nuevoUsuario.token})
-        //Crear perfil segun rol
+        // EMAIL CONFIRMACION
+        await enviarEmailConfirmacion({
+            email: nuevoUsuario.email,
+            nombre:nuevoUsuario.nombre,
+            token:nuevoUsuario.token
+        });
+        // CREAR PERFIL ESTUDIANTE
         if(nuevoUsuario.rol === "estudiante"){
             await Estudiante.create({
                 usuario: nuevoUsuario._id,
+                anioEscolar,
                 fotoPerfil: DEFAULT_PROFILE_IMAGE
             });
         }
+        // CREAR PERFIL TUTOR
         if(nuevoUsuario.rol === "tutor"){
             await Tutor.create({
                 usuario: nuevoUsuario._id,
                 fotoPerfil: DEFAULT_PROFILE_IMAGE
             });
         }
-        res.status(201).json({msg:"Usuario registrado exitosamente. Por favor, revisa tu correo para confirmar tu cuenta."});
+        res.status(201).json({
+            msg:"Usuario registrado exitosamente. Por favor, revisa tu correo para confirmar tu cuenta."
+        });
     }catch(error){
         console.error(error);
-        res.status(500).json({msg: "Error del servidor"});
+        res.status(500).json({
+            msg: "Error al registrar usuario"});
     }
-
 }
 const confirmarCuenta = async (req, res) =>{
     const {token} = req.params;
@@ -88,17 +120,24 @@ const confirmarCuenta = async (req, res) =>{
     }
 }
 const loginUsuario = async (req, res) => {
+
     try {
         const { email, password } = req.body;
         if (!email || !password) {
-            return res.status(400).json({msg: "Aun tiene campos vacios. Email y contraseña requeridos"});
+            return res.status(400).json({
+                msg: "Aun tiene campos vacios. Email y contraseña requeridos"
+            });
         }
-        const usuarioEncontrado =await Usuario.findOne({ email }).select("+password");
+        const usuarioEncontrado = await Usuario.findOne({ email }).select("+password");
         if (!usuarioEncontrado) {
-            return res.status(400).json({msg: "Usuario no encontrado. Registrese para iniciar sesión"});
+            return res.status(400).json({
+                msg: "Usuario no encontrado. Registrese para iniciar sesión"
+            });
         }
         if (!usuarioEncontrado.isActive) {
-            return res.status(403).json({msg: "Tu cuenta esta deshabilitada"});
+            return res.status(403).json({
+                msg: "Tu cuenta esta deshabilitada"
+            });
         }
         if (!usuarioEncontrado.isVerified) {
             return res.status(403).json({
@@ -109,25 +148,34 @@ const loginUsuario = async (req, res) => {
         }
         const passwordValida = await usuarioEncontrado.matchPassword(password);
         if (!passwordValida) {
-            return res.status(400).json({msg: "Contraseña incorrecta"});
+            return res.status(400).json({
+                msg: "Contraseña incorrecta"
+            });
         }
+        // GENERACION TOKEN JWT
         const token = generarJWT({
             id: usuarioEncontrado._id,
             email: usuarioEncontrado.email,
             rol: usuarioEncontrado.rol
         });
         let fotoPerfil = null;
+        let anioEscolar = null;
+
+        // PERFIL ESTUDIANTE
         if(usuarioEncontrado.rol === "estudiante"){
             const perfil = await Estudiante.findOne({
-                usuario: usuarioEncontrado._id});
+                usuario: usuarioEncontrado._id
+            });
             fotoPerfil = perfil?.fotoPerfil;
+            anioEscolar = perfil?.anioEscolar;
         }
+        // PERFIL TUTOR
         if(usuarioEncontrado.rol === "tutor"){
             const perfil = await Tutor.findOne({
                 usuario: usuarioEncontrado._id
-        });
-        fotoPerfil = perfil?.fotoPerfil;
-    }
+            });
+            fotoPerfil = perfil?.fotoPerfil;
+        }
         res.status(200).json({
             msg: "Inicio de sesión exitoso",
             token,
@@ -137,14 +185,17 @@ const loginUsuario = async (req, res) => {
                 apellido: usuarioEncontrado.apellido,
                 email: usuarioEncontrado.email,
                 rol: usuarioEncontrado.rol,
-                fotoPerfil
+                fotoPerfil,
+                anioEscolar
             },
             debeCambiarPassword:
                 usuarioEncontrado.debeCambiarPassword
         });
     } catch (error) {
         console.error(error);
-        res.status(500).json({msg: "Error del servidor"});
+        res.status(500).json({
+            msg: "Error al loguear usuario"
+        });
     }
 
 }
@@ -285,41 +336,74 @@ const obtenerUsuarios = async(req,res)=>{
   }
 };
 const crearUsuario = async (req, res) => {
+
   try {
-    const { nombre, apellido, email, password, rol } = req.body;
-
+    const { nombre, apellido, email, password, rol, anioEscolar } = req.body;
+    // VALIDAR CAMPOS
     if (!nombre || !apellido || !email || !password) {
-      return res.status(400).json({ msg: "Campos obligatorios" });
+      return res.status(400).json({
+        msg: "Campos obligatorios"
+      });
     }
-
+    // VALIDAR EXISTENCIA
     const existe = await Usuario.findOne({ email });
     if (existe) {
-      return res.status(400).json({ msg: "El usuario ya está registrado" });
+      return res.status(400).json({
+        msg: "El usuario ya está registrado"});
     }
-
-    const rolesValidos = ["admin", "tutor", "estudiante"];
-    const rolFinal = rolesValidos.includes(rol) ? rol : "estudiante";
+    // VALIDAR ROL
+    const rolesValidos = ["admin","tutor","estudiante"];
+    const rolFinal = rolesValidos.includes(rol)
+      ? rol
+      : "estudiante";
+    // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
+    if( rolFinal === "estudiante" && !anioEscolar){
+      return res.status(400).json({
+        msg:"El año escolar es obligatorio"
+      });
+    }
+    // VALIDAR ENUM
+    const aniosValidos = ["primero","segundo","tercero"];
+    if( rolFinal === "estudiante" && anioEscolar && !aniosValidos.includes(anioEscolar)){
+      return res.status(400).json({
+        msg:"Año escolar no válido"});
+    }
 
     const usuario = new Usuario({
       nombre,
       apellido,
       email,
-      rol: rolFinal,
+      rol: rolFinal
     });
-
+    // ENCRIPTAR PASSWORD
     usuario.password = await usuario.encryptPassword(password);
     usuario.token = null;
     usuario.isVerified = true;
-
+    // GUARDAR USUARIO
     await usuario.save();
-
+    // CREAR PERFIL ESTUDIANTE
+    if(usuario.rol === "estudiante"){
+      await Estudiante.create({
+        usuario: usuario._id,
+        anioEscolar,
+        fotoPerfil: DEFAULT_PROFILE_IMAGE
+      });
+    }
+    // CREAR PERFIL TUTOR
+    if(usuario.rol === "tutor"){
+      await Tutor.create({
+        usuario: usuario._id,
+        fotoPerfil: DEFAULT_PROFILE_IMAGE
+      });
+    }
     res.status(201).json({
       msg: "Usuario creado."
     });
-
   } catch (error) {
     console.error(error);
-    res.status(500).json({ msg: "Error al crear usuario" });
+    res.status(500).json({
+      msg: "Error al crear usuario"
+    });
   }
 }
 const actualizarUsuario = async(req,res)=>{
