@@ -8,7 +8,7 @@ import { DEFAULT_PROFILE_IMAGE } from "../config/defaults.js";
 const registrarUsuario = async (req, res) => {
 
     try{
-        const {nombre, apellido, email, password, confirmpassword, rol, anioEscolar} = req.body;
+        const {nombre, apellido, email, password, confirmpassword, rol, nivelAcademico} = req.body;
 
         // VALIDACIONES
         if( !nombre || !apellido || !email || !password || !confirmpassword){
@@ -39,13 +39,13 @@ const registrarUsuario = async (req, res) => {
             rolFinal = "tutor";
         }
         // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
-        if(rolFinal === "estudiante" && !anioEscolar){
+        if(rolFinal === "estudiante" && !nivelAcademico){
             return res.status(400).json({msg:"El año escolar es obligatorio"});
         }
 
-        const aniosValidos = ["primero", "segundo", "tercero"];
+        const aniosValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
 
-        if(rolFinal === "estudiante" && anioEscolar && !aniosValidos.includes(anioEscolar)){
+        if(rolFinal === "estudiante" && nivelAcademico && !aniosValidos.includes(nivelAcademico)){
             return res.status(400).json({
                 msg:"Año escolar no válido"
             });
@@ -80,7 +80,7 @@ const registrarUsuario = async (req, res) => {
         if(nuevoUsuario.rol === "estudiante"){
             await Estudiante.create({
                 usuario: nuevoUsuario._id,
-                anioEscolar,
+                nivelAcademico,
                 fotoPerfil: DEFAULT_PROFILE_IMAGE
             });
         }
@@ -159,7 +159,7 @@ const loginUsuario = async (req, res) => {
             rol: usuarioEncontrado.rol
         });
         let fotoPerfil = null;
-        let anioEscolar = null;
+        let nivelAcademico = null;
 
         // PERFIL ESTUDIANTE
         if(usuarioEncontrado.rol === "estudiante"){
@@ -167,7 +167,7 @@ const loginUsuario = async (req, res) => {
                 usuario: usuarioEncontrado._id
             });
             fotoPerfil = perfil?.fotoPerfil;
-            anioEscolar = perfil?.anioEscolar;
+            nivelAcademico = perfil?.nivelAcademico;
         }
         // PERFIL TUTOR
         if(usuarioEncontrado.rol === "tutor"){
@@ -186,7 +186,7 @@ const loginUsuario = async (req, res) => {
                 email: usuarioEncontrado.email,
                 rol: usuarioEncontrado.rol,
                 fotoPerfil,
-                anioEscolar
+                nivelAcademico
             },
             debeCambiarPassword:
                 usuarioEncontrado.debeCambiarPassword
@@ -313,9 +313,7 @@ const cambiarPasswordObligatorio = async(req,res)=>{
 const obtenerUsuarios = async(req,res)=>{
   try {
     const { search } = req.query;
-
     let filtro = {};
-
     if (search) {
       filtro = {
         $or: [
@@ -325,20 +323,36 @@ const obtenerUsuarios = async(req,res)=>{
         ]
       };
     }
-
-    const usuarios = await Usuario.find(filtro)
-      .select("-password -token");
-
-    res.json(usuarios);
-
+    const usuarios = await Usuario.find(filtro).select("-password -token");
+    const usuariosConPerfil = await Promise.all(
+      usuarios.map(async(user)=>{
+        let nivelAcademico = "";
+        // SOLO PARA ESTUDIANTES
+        if(user.rol === "estudiante"){
+          const perfilEstudiante =
+            await Estudiante.findOne({
+              usuario:user._id
+            });
+          nivelAcademico = perfilEstudiante?.nivelAcademico || "";
+        }
+        return {
+          ...user.toObject(),
+          nivelAcademico
+        };
+      })
+    );
+    res.status(200).json(usuariosConPerfil);
   } catch (error) {
-    res.status(500).json({ msg: "Error al obtener usuarios" });
+    console.log(error);
+    res.status(500).json({
+      msg:"Error al obtener usuarios"
+    });
   }
 };
 const crearUsuario = async (req, res) => {
 
   try {
-    const { nombre, apellido, email, password, rol, anioEscolar } = req.body;
+    const { nombre, apellido, email, password, rol, nivelAcademico } = req.body;
     // VALIDAR CAMPOS
     if (!nombre || !apellido || !email || !password) {
       return res.status(400).json({
@@ -357,14 +371,14 @@ const crearUsuario = async (req, res) => {
       ? rol
       : "estudiante";
     // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
-    if( rolFinal === "estudiante" && !anioEscolar){
+    if( rolFinal === "estudiante" && !nivelAcademico){
       return res.status(400).json({
         msg:"El año escolar es obligatorio"
       });
     }
     // VALIDAR ENUM
-    const aniosValidos = ["primero","segundo","tercero"];
-    if( rolFinal === "estudiante" && anioEscolar && !aniosValidos.includes(anioEscolar)){
+    const aniosValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
+    if( rolFinal === "estudiante" && nivelAcademico && !aniosValidos.includes(nivelAcademico)){
       return res.status(400).json({
         msg:"Año escolar no válido"});
     }
@@ -385,7 +399,7 @@ const crearUsuario = async (req, res) => {
     if(usuario.rol === "estudiante"){
       await Estudiante.create({
         usuario: usuario._id,
-        anioEscolar,
+        nivelAcademico,
         fotoPerfil: DEFAULT_PROFILE_IMAGE
       });
     }
@@ -409,64 +423,56 @@ const crearUsuario = async (req, res) => {
 const actualizarUsuario = async(req,res)=>{
 
     try{
-
         const {id} = req.params;
-
         const {
             nombre,
             apellido,
             email,
             rol,
-            password
+            password,
+            nivelAcademico
         } = req.body;
-        console.log(id);
-        console.log(req.usuario);
         const usuario = await Usuario.findById(id);
-
         if(!usuario){
-
             return res.status(404).json({
                 msg:"Usuario no encontrado"
             });
-
         }
-
+        // DATOS USUARIO
         if(nombre) usuario.nombre = nombre;
-
         if(apellido) usuario.apellido = apellido;
-
         if(email) usuario.email = email;
-
-        //if(rol && req.usuario.rol == "admin"){
         if(rol){
-
             usuario.rol = rol;
-
         }
-
         if(password && password.trim() !== ""){
-
             usuario.password =
                 await usuario.encryptPassword(password);
-
         }
-
         await usuario.save();
-
+        // SOLO NIVEL ACADÉMICO DEL ESTUDIANTE
+        if(usuario.rol === "estudiante"){
+            const perfilEstudiante =
+                await Estudiante.findOne({
+                    usuario: usuario._id
+                });
+            if(perfilEstudiante){
+                if(nivelAcademico !== undefined){
+                    perfilEstudiante.nivelAcademico =
+                        nivelAcademico;
+                }
+                await perfilEstudiante.save();
+            }
+        }
         res.status(200).json({
             msg:"Usuario actualizado correctamente"
         });
-
     }catch(error){
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al actualizar el Usuario"
         });
-
     }
-
 }
 const desactivarUsuario = async(req,res)=>{
     try{

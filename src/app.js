@@ -2,7 +2,10 @@ import express from "express";
 import cors from "cors";
 import userRoutes from "./routes/user_routes.js";
 import authRoutes from "./routes/auth_routes.js";
-import perfilRoutes from "./routes/perfil_routes.js"
+import perfilRoutes from "./routes/perfil_routes.js";
+import materiaRoutes from "./routes/materia_routes.js";
+import temaRoutes from "./routes/tema_routes.js";
+import recursoRoutes from "./routes/recurso_routes.js";
 
 const app = express();
 
@@ -17,6 +20,8 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/profile", perfilRoutes);
-
+app.use("/api/materia", materiaRoutes);
+app.use("/api/tema", temaRoutes);
+app.use("/api/recurso",recursoRoutes);
 
 export default app;

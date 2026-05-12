@@ -52,7 +52,7 @@ const actualizarPerfil = async(req,res)=>{
                     msg:"Perfil estudiante no encontrado"
                 });
             }
-            const {telefono,direccion,fechaNacimiento,institucion,anioEscolar,nivelAcademico,fotoPerfil} = req.body;
+            const {telefono,direccion,fechaNacimiento,institucion,nivelAcademico,fotoPerfil} = req.body;
 
             if(telefono !== undefined) perfil.telefono = telefono;
 
@@ -61,8 +61,6 @@ const actualizarPerfil = async(req,res)=>{
             if(fechaNacimiento !== undefined) perfil.fechaNacimiento = fechaNacimiento;
 
             if(institucion !== undefined) perfil.institucion = institucion;
-
-            if(anioEscolar !== undefined) perfil.anioEscolar = anioEscolar;
 
             if(nivelAcademico !== undefined) perfil.nivelAcademico = nivelAcademico;
 
