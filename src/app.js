@@ -7,6 +7,8 @@ import materiaRoutes from "./routes/materia_routes.js";
 import temaRoutes from "./routes/tema_routes.js";
 import recursoRoutes from "./routes/recurso_routes.js";
 
+import estudianteRoutes from "./routes/estudiante_routes.js";
+
 const app = express();
 
 //Middlewares
@@ -23,5 +25,6 @@ app.use("/api/profile", perfilRoutes);
 app.use("/api/materia", materiaRoutes);
 app.use("/api/tema", temaRoutes);
 app.use("/api/recurso",recursoRoutes);
+app.use("/api/estudiante", estudianteRoutes);
 
 export default app;
