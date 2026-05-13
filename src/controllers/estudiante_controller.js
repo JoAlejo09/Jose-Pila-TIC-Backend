@@ -3,6 +3,7 @@ import Estudiante from "../models/Estudiante.js";
 import Tema from "../models/Tema.js";
 import Materia from "../models/Materia.js";
 import Recurso from "../models/Recurso.js";
+import Resultado from "../models/Resultado.js";
 
 const obtenerMateriasEstudiante = async(req,res)=>{
     try {
@@ -171,5 +172,79 @@ const obtenerRecursosPorTema = async(req,res)=>{
     }
 
 }
+const obtenerResultadosEstudiante = async(req,res)=>{
+    try {
+        const resultados = await Resultado.find({
+            estudiante: req.usuario._id
+        }).populate({
+            path:"cuestionario",
+            select:`titulo
+                    tipoEvaluacion
+                    nivel
+                    materia
+                    tema`,
+            populate:[
+                { path:"materia",
+                    select: "nombre"
+                },{
+                    path:"tema",
+                    select:"nombre"
+                }
+            ]
+        }).sort({createdAt:-1});
+        res.json(resultados);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg:"Error al obtener resultados"
+        });
+        
+    }
+}
+const obtenerResultadoEstudianteID = async(req,res)=>{
+    try {
+        const {id} = req.params;
+        const resultado = await Resultado.findById(id)
+            .populate({
+                path:"cuestionario",
+                select:`titulo
+                        descripcion
+                        instrucciones
+                        tipoEvaluacion
+                        nivel
+                        materia
+                        tema`,
+                populate:[
+                    {path:"materia", select:"nombre"},
+                    {path:"tema",   select:"nombre"}
+                ]
+            })
+            .populate({
+                path:"respuesta.pregunta",
+                select:`enunciado
+                        tipoPregunta
+                        opciones
+                        recursoApoyo`
+            });
+
+            if(!resultado){
+                return res.status(404).json({
+                    msg:"Resultado no encontrado"
+                })
+            }
+            if(resultado.estudiante.toString() !== req.usuario._id.toString()){
+                return res.status(403).json({
+                    msg:"No tiene permisos para ver este resultado"
+                });
+            }
+            res.json(resultado);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg:"Error al obtener resultado"
+        });
+    }
+}
 export {obtenerMateriasEstudiante, obtenerTemasPorMateria,
-        obtenerRecursosPorTema};
+        obtenerRecursosPorTema,
+        obtenerResultadosEstudiante, obtenerResultadoEstudianteID};

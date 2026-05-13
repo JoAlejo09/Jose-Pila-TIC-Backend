@@ -8,6 +8,8 @@ import temaRoutes from "./routes/tema_routes.js";
 import recursoRoutes from "./routes/recurso_routes.js";
 
 import estudianteRoutes from "./routes/estudiante_routes.js";
+import cuestionarioRoutes from "./routes/cuestionario_routes.js";
+import preguntaRoutes from "./routes/pregunta_routes.js";
 
 const app = express();
 
@@ -26,5 +28,7 @@ app.use("/api/materia", materiaRoutes);
 app.use("/api/tema", temaRoutes);
 app.use("/api/recurso",recursoRoutes);
 app.use("/api/estudiante", estudianteRoutes);
+app.use("/api/cuestionario", cuestionarioRoutes);
+app.use("/api/pregunta", preguntaRoutes);
 
 export default app;

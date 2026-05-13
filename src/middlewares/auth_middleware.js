@@ -1,35 +1,46 @@
 import jwt from "jsonwebtoken";
 
-const verificarJWT = (req, res, next)=>{
+const verificarJWT = (req,res,next)=>{
     try {
         const authHeader = req.headers.authorization;
-        if(!authHeader|| !authHeader.startsWith("Bearer ")){
-            return res.status(401).json({msg:"No se proporcionó un token de autenticación"});
+        if(!authHeader || !authHeader.startsWith("Bearer ")){
+            return res.status(401).json({
+                msg:"No se proporcionó un token válido"
+            });
         }
-        const parts = authHeader.split(" ");
-        if (parts.length !== 2) {
-            return res.status(401).json({ msg: "Formato de token inválido" });
-        }
-        const token = parts[1];
-        const decoded = jwt.verify(token, process.env.JWT_SECRET_KEY);
+        const token = authHeader.split(" ")[1];
+        const decoded = jwt.verify(
+            token,
+            process.env.JWT_SECRET_KEY
+        );
         req.usuario = decoded;
-
         next();
-
     } catch (error) {
-        if(error.name === "TokenExpiredError")
-            return res.status(401).json({msg:"Token Expirado"});
-        else{
-            return res.status(401).json({msg:"Token de autenticación no válido"});        
+        if(error.name === "TokenExpiredError"){
+            return res.status(401).json({
+                msg:"Token expirado"
+            });
         }
-    }
-}
-const soloAdmin = (req, res, next)=>{
-    if(!req.usuario || req.usuario.rol !== "admin"){
-        return res.status(403).json({
-            msg:"Acceso denegado. Solo administrador"
+        return res.status(401).json({
+            msg:"Token no válido"
         });
     }
-    next();
-}
-export { verificarJWT, soloAdmin };
+};
+const verificarRol = (...rolesPermitidos)=>{
+
+    return (req,res,next)=>{
+        if(!req.usuario){
+            return res.status(401).json({
+                msg:"Usuario no autenticado"
+            });
+        }
+        if( !rolesPermitidos.includes(req.usuario.rol) ){
+            return res.status(403).json({
+                msg:"No tiene permisos para realizar esta acción"
+            });
+        }
+        next();
+    };
+};
+
+export { verificarJWT, verificarRol};
