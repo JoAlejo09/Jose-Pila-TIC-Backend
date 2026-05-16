@@ -35,11 +35,6 @@ const estudianteSchema = new mongoose.Schema(
       enum: ["1ro BGU", "2do BGU", "3ro BGU"],
       default: ""
     },
-
-    fotoPerfil: {
-      type: String,
-      default: ""
-    }
   },
   {
     timestamps: true

@@ -1,181 +1,135 @@
 import Usuario from "../models/Usuario.js";
-import Estudiante from "../models/Estudiante.js";
-import Tutor from "../models/Tutor.js";
-import {enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion} from "../config/nodemailer.js";
+import { enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion } from "../config/nodemailer.js";
+
 import generarJWT from "../config/JWT.js";
-import { DEFAULT_PROFILE_IMAGE } from "../config/defaults.js";
 
+
+// REGISTRAR NUEVO USUARIO
 const registrarUsuario = async (req, res) => {
+    try {
+        const { nombre, apellido, email, password, confirmpassword, rol } = req.body;
 
-    try{
-        const {nombre, apellido, email, password, confirmpassword, rol, nivelAcademico} = req.body;
-
-        // VALIDACIONES
-        if( !nombre || !apellido || !email || !password || !confirmpassword){
+        if (!nombre || !apellido || !email || !password || !confirmpassword ) {
             return res.status(400).json({
-                msg: "Algunos campos estan vacios. Son obligatorios"
+                msg: "Algunos campos están vacíos"
             });
         }
-        // VALIDACION PASSWORDS
-        if(password !== confirmpassword){
+        if (password !== confirmpassword) {
             return res.status(400).json({
-                msg:"Las contraseñas no coinciden"
+                msg: "Las contraseñas no coinciden"
             });
         }
-        if(password.length < 6){
+        if (password.length < 6) {
             return res.status(400).json({
-                msg:"La contraseña debe tener mínimo 6 caracteres"
+                msg: "La contraseña debe tener mínimo 6 caracteres"
             });
         }
-        // VALIDACION EMAIL
-        if(!email.includes("@")){
+        if (!email.includes("@")) {
             return res.status(400).json({
-                msg:"El email no es válido"
+                msg: "Email no válido"
             });
         }
-        // VALIDACION ROL
+        // VALIDAR ROL
         let rolFinal = "estudiante";
         if (rol === "tutor") {
             rolFinal = "tutor";
         }
-        // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
-        if(rolFinal === "estudiante" && !nivelAcademico){
-            return res.status(400).json({msg:"El año escolar es obligatorio"});
-        }
-
-        const aniosValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
-
-        if(rolFinal === "estudiante" && nivelAcademico && !aniosValidos.includes(nivelAcademico)){
+        // VALIDAR EXISTENCIA
+        const usuarioExiste = await Usuario.findOne({ email });
+        if (usuarioExiste) {
             return res.status(400).json({
-                msg:"Año escolar no válido"
+                msg: "El correo ya se encuentra registrado"
             });
         }
-        // VALIDAR USUARIO EXISTENTE
-        const usuarioExiste = await Usuario.findOne({email});
-        if(usuarioExiste){
-            return res.status(400).json({
-                msg:"El correo electronico ya se encuentra registrado."});
-        }
-        // CREAR USUARIO
         const nuevoUsuario = new Usuario({
             nombre,
             apellido,
             email,
             rol: rolFinal
         });
-        // ENCRIPTAR PASSWORD
-        let nuevoPasswordEncriptado = await nuevoUsuario.encryptPassword(password);
-        nuevoUsuario.password = nuevoPasswordEncriptado;
-        // TOKEN
+        nuevoUsuario.password = await nuevoUsuario.encryptPassword(password);
         nuevoUsuario.generarToken();
-        // GUARDAR USUARIO
         await nuevoUsuario.save();
-        // EMAIL CONFIRMACION
+
         await enviarEmailConfirmacion({
             email: nuevoUsuario.email,
-            nombre:nuevoUsuario.nombre,
-            token:nuevoUsuario.token
+            nombre: nuevoUsuario.nombre,
+            token: nuevoUsuario.token
         });
-        // CREAR PERFIL ESTUDIANTE
-        if(nuevoUsuario.rol === "estudiante"){
-            await Estudiante.create({
-                usuario: nuevoUsuario._id,
-                nivelAcademico,
-                fotoPerfil: DEFAULT_PROFILE_IMAGE
-            });
-        }
-        // CREAR PERFIL TUTOR
-        if(nuevoUsuario.rol === "tutor"){
-            await Tutor.create({
-                usuario: nuevoUsuario._id,
-                fotoPerfil: DEFAULT_PROFILE_IMAGE
-            });
-        }
         res.status(201).json({
-            msg:"Usuario registrado exitosamente. Por favor, revisa tu correo para confirmar tu cuenta."
+            msg: "Usuario registrado correctamente"
         });
-    }catch(error){
-        console.error(error);
+    } catch (error) {
+        console.log(error);
         res.status(500).json({
-            msg: "Error al registrar usuario"});
+            msg: "Error al registrar usuario"
+        });
     }
-}
-const confirmarCuenta = async (req, res) =>{
-    const {token} = req.params;
-    try{
-        const usuarioEncontrado = await Usuario.findOne({token});
-        if(!usuarioEncontrado){
-            return res.status(400).json({msg:"Token no válido"});
+};
+// CONFIRMAR CUENTA
+const confirmarCuenta = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const usuarioEncontrado = await Usuario.findOne({ token });
+        if (!usuarioEncontrado) {
+            return res.status(400).json({
+                msg: "Token no válido"
+            });
         }
         usuarioEncontrado.isVerified = true;
         usuarioEncontrado.token = null;
-
         await usuarioEncontrado.save();
-
-        res.status(200).json({msg:"Cuenta confirmada correctamente"});
+        res.status(200).json({
+            msg: "Cuenta confirmada correctamente"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error del servidor"
+        });
     }
-    catch(error){  
-        console.error(error);
-        res.status(500).json({msg:"Error del servidor"});
-    }
-}
+};
+// LOGIN
 const loginUsuario = async (req, res) => {
-
     try {
         const { email, password } = req.body;
+
         if (!email || !password) {
             return res.status(400).json({
-                msg: "Aun tiene campos vacios. Email y contraseña requeridos"
+                msg: "Email y contraseña obligatorios"
             });
         }
-        const usuarioEncontrado = await Usuario.findOne({ email }).select("+password");
+        const usuarioEncontrado = await Usuario.findOne({ email })
+                                .select("+password");
         if (!usuarioEncontrado) {
             return res.status(400).json({
-                msg: "Usuario no encontrado. Registrese para iniciar sesión"
+                msg: "Usuario no encontrado"
             });
         }
         if (!usuarioEncontrado.isActive) {
             return res.status(403).json({
-                msg: "Tu cuenta esta deshabilitada"
+                msg: "Tu cuenta está deshabilitada"
             });
         }
         if (!usuarioEncontrado.isVerified) {
             return res.status(403).json({
-                msg: "Tu cuenta no ha sido verificada. Por favor, revisa tu correo para confirmar tu cuenta.",
+                msg: "Tu cuenta no ha sido verificada",
                 noVerificada: true,
                 email: usuarioEncontrado.email
             });
         }
+
         const passwordValida = await usuarioEncontrado.matchPassword(password);
         if (!passwordValida) {
             return res.status(400).json({
                 msg: "Contraseña incorrecta"
             });
         }
-        // GENERACION TOKEN JWT
         const token = generarJWT({
             id: usuarioEncontrado._id,
             email: usuarioEncontrado.email,
             rol: usuarioEncontrado.rol
         });
-        let fotoPerfil = null;
-        let nivelAcademico = null;
-
-        // PERFIL ESTUDIANTE
-        if(usuarioEncontrado.rol === "estudiante"){
-            const perfil = await Estudiante.findOne({
-                usuario: usuarioEncontrado._id
-            });
-            fotoPerfil = perfil?.fotoPerfil;
-            nivelAcademico = perfil?.nivelAcademico;
-        }
-        // PERFIL TUTOR
-        if(usuarioEncontrado.rol === "tutor"){
-            const perfil = await Tutor.findOne({
-                usuario: usuarioEncontrado._id
-            });
-            fotoPerfil = perfil?.fotoPerfil;
-        }
         res.status(200).json({
             msg: "Inicio de sesión exitoso",
             token,
@@ -185,26 +139,27 @@ const loginUsuario = async (req, res) => {
                 apellido: usuarioEncontrado.apellido,
                 email: usuarioEncontrado.email,
                 rol: usuarioEncontrado.rol,
-                fotoPerfil,
-                nivelAcademico
+                fotoPerfil: usuarioEncontrado.fotoPerfil,
+                perfilCompleto: usuarioEncontrado.perfilCompleto
             },
-            debeCambiarPassword:
-                usuarioEncontrado.debeCambiarPassword
+            debeCambiarPassword: usuarioEncontrado.debeCambiarPassword
         });
     } catch (error) {
-        console.error(error);
+        console.log(error);
         res.status(500).json({
-            msg: "Error al loguear usuario"
+            msg: "Error al iniciar sesión"
         });
     }
-
-}
-const recuperarContrasena= async(req,res)=>{
-    try{
-        const {email}= req.body;
-        const usuarioEncontrado = await Usuario.findOne({email});
-        if(!usuarioEncontrado){
-            return res.status(400).json({msg:"Usuario no encontrado"});
+};
+// RECUPERAR PASSWORD
+const recuperarContrasena = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const usuarioEncontrado = await Usuario.findOne({ email });
+        if (!usuarioEncontrado) {
+            return res.status(400).json({
+                msg: "Usuario no encontrado"
+            });
         }
         usuarioEncontrado.generarToken();
         await usuarioEncontrado.save();
@@ -213,292 +168,291 @@ const recuperarContrasena= async(req,res)=>{
             nombre: usuarioEncontrado.nombre,
             token: usuarioEncontrado.token
         });
-        res.json({msg:"Se ha enviado un correo con las instrucciones para recuperar tu contraseña"});
-    }catch(error){ 
-        console.error(error);
-        res.status(500).json({msg:"Error del servidor"});
+        res.status(200).json({
+            msg: "Correo enviado correctamente"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error del servidor"
+        });
     }
-}
-const comprobarToken = async(req, res)=>{
-    const {token} = req.params;
-    const usuarioEncontrado = await Usuario.findOne({token});
-    if (!usuarioEncontrado){
-        return res.status(400).json({msg:"Token no válido"});
+};
+// COMPROBAR TOKEN
+const comprobarToken = async (req, res) => {
+    const { token } = req.params;
+    const usuarioEncontrado = await Usuario.findOne({ token });
+    if (!usuarioEncontrado) {
+        return res.status(400).json({
+            msg: "Token no válido"
+        });
     }
-    res.status(200).json({msg:"Token válido, el usuario existe"});
-}
-const crearNuevoPassword = async(req, res)=>{
-    try{
-        const {token} = req.params;
-        const {password, confirmpassword} = req.body;
-        console.log(token);
-        console.log(password);
-        console.log(confirmpassword)
-        const usuarioEncontrado = await Usuario.findOne({token});
-        if (!usuarioEncontrado){
-            return res.status(400).json({msg:"Token no válido"});
+    res.status(200).json({
+        msg: "Token válido"
+    });
+};
+// CREAR NUEVO PASSWORD
+const crearNuevoPassword = async (req, res) => {
+    try {
+        const { token } = req.params;
+        const { password, confirmpassword } = req.body;
+        const usuarioEncontrado = await Usuario.findOne({ token });
+        if (!usuarioEncontrado) {
+            return res.status(400).json({
+                msg: "Token no válido"
+            });
         }
-        if(password !== confirmpassword){
-            return res.status(400).json({msg:"Las contraseñas no coinciden"});
+        if (password !== confirmpassword) {
+            return res.status(400).json({
+                msg: "Las contraseñas no coinciden"
+            });
         }
         usuarioEncontrado.password = await usuarioEncontrado.encryptPassword(password);
         usuarioEncontrado.token = null;
         await usuarioEncontrado.save();
-        res.status(200).json({msg:"Contraseña actualizada exitosamente"});
-    }catch(error){
-        console.error(error);
-        res.status(500).json({msg:"Error del servidor"});
+        res.status(200).json({
+            msg: "Contraseña actualizada"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error del servidor"
+        });
     }
-}
-const reenviarConfirmacion = async(req,res)=>{
+};
+//Reenviar confirmacion de cuenta
+const reenviarConfirmacion = async (req, res) => {
     try {
-        const {email} = req.body;
-        if(!email){
+        const { email } = req.body;
+        if (!email) {
             return res.status(400).json({
-                msg:"Email requerido"
+                msg: "Email requerido"
             });
         }
-        const usuario = await Usuario.findOne({email});
-        if(!usuario){
+        const usuario = await Usuario.findOne({ email });
+        if (!usuario) {
             return res.status(400).json({
-                msg:"Usuario no encontrado"
-            })
-        }
-        if(usuario.isVerified){
-            return res.status(400).json({
-                msg:"La cuenta ya esta verificada"
+                msg: "Usuario no encontrado"
             });
         }
-        usuario.token = usuario.generarToken();
+        if (usuario.isVerified) {
+            return res.status(400).json({
+                msg: "La cuenta ya está verificada"
+            });
+        }
+        usuario.generarToken();
         await usuario.save();
         await enviarEmailConfirmacion({
             email: usuario.email,
             nombre: usuario.nombre,
             token: usuario.token
-        })
-         res.status(200).json({
-            msg:"Correo reenviado correctamente"
+        });
+
+        res.status(200).json({
+            msg: "Correo reenviado correctamente"
         });
     } catch (error) {
-        console.error(error);
-         res.status(500).json({
-            msg:"Error del servidor"
+        console.log(error);
+        res.status(500).json({
+            msg: "Error del servidor"
         });
     }
-}
-const cambiarPasswordObligatorio = async(req,res)=>{
-    try{
-        const usuario = await Usuario.findById(req.usuario.id).select("+password");
-        if(!usuario){
-            return res.status(404).json({msg:"Usuario no encontrado"});
+};
+// Cambio Contraseña Obligatorio
+const cambiarPasswordObligatorio = async (req, res) => {
+    try {
+        const usuario = await Usuario.findById(req.usuario.id)
+                        .select("+password");
+        if (!usuario) {
+            return res.status(404).json({
+                msg: "Usuario no encontrado"
+            });
         }
-        const {password, confirmpassword} = req.body;
-        if(!password || !confirmpassword){
-            return res.status(400).json({msg:"Todos los campos son obligatorios"});
+        const { password, confirmpassword } = req.body;
+        if (!password || !confirmpassword) {
+            return res.status(400).json({
+                msg: "Todos los campos son obligatorios"
+            });
         }
-        if(password !== confirmpassword){
-            return res.status(400).json({msg:"Las contraseñas no coinciden"});
+        if (password !== confirmpassword) {
+            return res.status(400).json({
+                msg: "Las contraseñas no coinciden"
+            });
         }
         usuario.password = await usuario.encryptPassword(password);
         usuario.debeCambiarPassword = false;
         await usuario.save();
-        res.status(200).json({msg:"Contraseña actualizada correctamente"});
-    }catch(error){
+        res.status(200).json({
+            msg: "Contraseña actualizada correctamente"
+        });
+    } catch (error) {
         console.log(error);
-        res.status(500).json({msg:"Error del servidor"});
-    }
-}
+        res.status(500).json({
+            msg: "Error del servidor"
+        });
 
-/*ACCIONES PARA ADMIN */
-const obtenerUsuarios = async(req,res)=>{
-  try {
-    const { search } = req.query;
-    let filtro = {};
-    if (search) {
-      filtro = {
-        $or: [
-          { nombre: { $regex: search, $options: "i" } },
-          { apellido: { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } }
-        ]
-      };
     }
-    const usuarios = await Usuario.find(filtro).select("-password -token");
-    const usuariosConPerfil = await Promise.all(
-      usuarios.map(async(user)=>{
-        let nivelAcademico = "";
-        // SOLO PARA ESTUDIANTES
-        if(user.rol === "estudiante"){
-          const perfilEstudiante =
-            await Estudiante.findOne({
-              usuario:user._id
-            });
-          nivelAcademico = perfilEstudiante?.nivelAcademico || "";
-        }
-        return {
-          ...user.toObject(),
-          nivelAcademico
-        };
-      })
-    );
-    res.status(200).json(usuariosConPerfil);
-  } catch (error) {
-    console.log(error);
-    res.status(500).json({
-      msg:"Error al obtener usuarios"
-    });
-  }
+
 };
+//Obtener usuarios con busqueda personalizada
+const obtenerUsuarios = async (req, res) => {
+    try {
+        const { search } = req.query;
+        let filtro = {};
+        if (search) {
+
+            filtro = {
+                $or: [
+                    {
+                        nombre: {
+                            $regex: search,
+                            $options: "i"
+                        }
+                    },
+                    {
+                        apellido: {
+                            $regex: search,
+                            $options: "i"
+                        }
+                    },
+                    {
+                        email: {
+                            $regex: search,
+                            $options: "i"
+                        }
+                    }
+                ]
+            };
+        }
+        const usuarios = await Usuario.find(filtro)
+                        .select("-password -token");
+        res.status(200).json(usuarios);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error al obtener usuarios"
+        });
+    }
+};
+
+//FUNCIONALIDADES PARA ADMIN
+
+//Crear nuevo usuario por admin
 const crearUsuario = async (req, res) => {
+    try {
+        const { nombre, apellido, email, password, rol } = req.body;
 
-  try {
-    const { nombre, apellido, email, password, rol, nivelAcademico } = req.body;
-    // VALIDAR CAMPOS
-    if (!nombre || !apellido || !email || !password) {
-      return res.status(400).json({
-        msg: "Campos obligatorios"
-      });
-    }
-    // VALIDAR EXISTENCIA
-    const existe = await Usuario.findOne({ email });
-    if (existe) {
-      return res.status(400).json({
-        msg: "El usuario ya está registrado"});
-    }
-    // VALIDAR ROL
-    const rolesValidos = ["admin","tutor","estudiante"];
-    const rolFinal = rolesValidos.includes(rol)
-      ? rol
-      : "estudiante";
-    // VALIDAR AÑO ESCOLAR SOLO ESTUDIANTE
-    if( rolFinal === "estudiante" && !nivelAcademico){
-      return res.status(400).json({
-        msg:"El año escolar es obligatorio"
-      });
-    }
-    // VALIDAR ENUM
-    const aniosValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
-    if( rolFinal === "estudiante" && nivelAcademico && !aniosValidos.includes(nivelAcademico)){
-      return res.status(400).json({
-        msg:"Año escolar no válido"});
-    }
+        if ( !nombre || !apellido || !email || !password ) {
+            return res.status(400).json({
+                msg: "Campos obligatorios"
+            });
+        }
 
-    const usuario = new Usuario({
-      nombre,
-      apellido,
-      email,
-      rol: rolFinal
-    });
-    // ENCRIPTAR PASSWORD
-    usuario.password = await usuario.encryptPassword(password);
-    usuario.token = null;
-    usuario.isVerified = true;
-    // GUARDAR USUARIO
-    await usuario.save();
-    // CREAR PERFIL ESTUDIANTE
-    if(usuario.rol === "estudiante"){
-      await Estudiante.create({
-        usuario: usuario._id,
-        nivelAcademico,
-        fotoPerfil: DEFAULT_PROFILE_IMAGE
-      });
-    }
-    // CREAR PERFIL TUTOR
-    if(usuario.rol === "tutor"){
-      await Tutor.create({
-        usuario: usuario._id,
-        fotoPerfil: DEFAULT_PROFILE_IMAGE
-      });
-    }
-    res.status(201).json({
-      msg: "Usuario creado."
-    });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({
-      msg: "Error al crear usuario"
-    });
-  }
-}
-const actualizarUsuario = async(req,res)=>{
+        const existe = await Usuario.findOne({ email });
+        if (existe) {
+            return res.status(400).json({
+                msg: "El usuario ya está registrado"
+            });
+        }
+        const rolesValidos = ["admin", "tutor", "estudiante" ];
+        const rolFinal = rolesValidos.includes(rol)
+                ? rol
+                : "estudiante";
 
-    try{
-        const {id} = req.params;
-        const {
+        const usuario = new Usuario({
             nombre,
             apellido,
             email,
-            rol,
-            password,
-            nivelAcademico
-        } = req.body;
-        const usuario = await Usuario.findById(id);
-        if(!usuario){
-            return res.status(404).json({
-                msg:"Usuario no encontrado"
-            });
-        }
-        // DATOS USUARIO
-        if(nombre) usuario.nombre = nombre;
-        if(apellido) usuario.apellido = apellido;
-        if(email) usuario.email = email;
-        if(rol){
-            usuario.rol = rol;
-        }
-        if(password && password.trim() !== ""){
-            usuario.password =
-                await usuario.encryptPassword(password);
-        }
-        await usuario.save();
-        // SOLO NIVEL ACADÉMICO DEL ESTUDIANTE
-        if(usuario.rol === "estudiante"){
-            const perfilEstudiante =
-                await Estudiante.findOne({
-                    usuario: usuario._id
-                });
-            if(perfilEstudiante){
-                if(nivelAcademico !== undefined){
-                    perfilEstudiante.nivelAcademico =
-                        nivelAcademico;
-                }
-                await perfilEstudiante.save();
-            }
-        }
-        res.status(200).json({
-            msg:"Usuario actualizado correctamente"
+            rol: rolFinal
         });
-    }catch(error){
+
+        usuario.password = await usuario.encryptPassword(password);
+        usuario.token = null;
+        usuario.isVerified = true;
+        await usuario.save();
+        res.status(201).json({
+            msg: "Usuario creado correctamente"
+        });
+    } catch (error) {
         console.log(error);
         res.status(500).json({
-            msg:"Error al actualizar el Usuario"
+            msg: "Error al crear usuario"
         });
     }
-}
-const desactivarUsuario = async(req,res)=>{
-    try{
-        const {id} = req.params;
+};
+// Actualizar informacion usuario Admin
+const actualizarUsuario = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { nombre, apellido, email, rol, password, fotoPerfil } = req.body;
+
         const usuario = await Usuario.findById(id);
-        if(!usuario){
-            return res.status(404).json({msg:"Usuario no encontrado"})
+
+        if (!usuario) {
+            return res.status(404).json({
+                msg: "Usuario no encontrado"
+            });
+        }
+
+        if (nombre) usuario.nombre = nombre;
+        if (apellido) usuario.apellido = apellido;
+        if (email) usuario.email = email;
+        if (rol) usuario.rol = rol;
+        if (fotoPerfil) {
+            usuario.fotoPerfil = fotoPerfil;
+        }
+        if ( password && password.trim() !== "" ) {
+            usuario.password = await usuario.encryptPassword(password);
+        }
+        await usuario.save();
+        res.status(200).json({
+            msg: "Usuario actualizado correctamente"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error al actualizar usuario"
+        });
+    }
+};
+// Dar de baja usuario por Admin
+const desactivarUsuario = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const usuario = await Usuario.findById(id);
+
+        if (!usuario) {
+            return res.status(404).json({
+                msg: "Usuario no encontrado"
+            });
         }
         usuario.isActive = false;
         await usuario.save();
-        res.status(201).json({msg:"Usuario desactivado"});
-    }catch(error){
-        res.status(500).json({msg:"Error al desactivar usuario"});
+        res.status(200).json({
+            msg: "Usuario desactivado"
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg: "Error al desactivar usuario"
+        });
     }
 };
-const activarUsuario = async(req,res)=>{
-    try{
-        const {id} = req.params;
+//Activar un usuario por admin
+const activarUsuario = async (req, res) => {
+    try {
+        const { id } = req.params;
         const usuario = await Usuario.findById(id);
-        if(!usuario){
-            return res.status(400).json({msg:"Usuario no encontrado"});
+
+        if (!usuario) {
+            return res.status(404).json({
+                msg: "Usuario no encontrado"
+            });
         }
         const passwordTemporal = Math.random().toString(36).slice(-8);
-        console.log(passwordTemporal);
 
         usuario.password = await usuario.encryptPassword(passwordTemporal);
+
         usuario.isActive = true;
         usuario.debeCambiarPassword = true;
         await usuario.save();
@@ -506,16 +460,17 @@ const activarUsuario = async(req,res)=>{
             email: usuario.email,
             nombre: usuario.nombre,
             passwordTemporal
-        })
+        });
         res.status(200).json({
-            msg:"Usuario activado correctamente"
-        })
-    }catch(error){
+            msg: "Usuario activado correctamente"
+        });
+    } catch (error) {
         console.log(error);
         res.status(500).json({
-            msg:"Error al activar usuario"
+            msg: "Error al activar usuario"
         });
     }
 };
-export {registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword, reenviarConfirmacion,
-        cambiarPasswordObligatorio, obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario,activarUsuario};  
+
+
+export { registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword, reenviarConfirmacion, cambiarPasswordObligatorio, obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario, activarUsuario };

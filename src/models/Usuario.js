@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
+import { DEFAULT_PROFILE_IMAGE } from "../config/defaults.js";
 
 const usuarioSchema = new mongoose.Schema(
     {
@@ -31,6 +32,10 @@ const usuarioSchema = new mongoose.Schema(
             enum:["admin","tutor","estudiante"],
             default:"estudiante"
         },
+        fotoPerfil: {
+            type: String,
+            default: DEFAULT_PROFILE_IMAGE
+        },
         isActive:{
             type: Boolean,
             default: true,
@@ -45,7 +50,11 @@ const usuarioSchema = new mongoose.Schema(
         debeCambiarPassword:{
             type:Boolean,
             default:false
-        }   
+        },
+        perfilCompleto:{
+            type:Boolean,
+            default:false
+        }
     },
     {timestamps: true}
 );

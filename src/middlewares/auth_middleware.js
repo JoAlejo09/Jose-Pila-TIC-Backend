@@ -27,7 +27,6 @@ const verificarJWT = (req,res,next)=>{
     }
 };
 const verificarRol = (...rolesPermitidos)=>{
-
     return (req,res,next)=>{
         if(!req.usuario){
             return res.status(401).json({
