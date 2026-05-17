@@ -8,23 +8,19 @@ const estudianteSchema = new mongoose.Schema(
       required: true,
       unique: true
     },
-
     fechaNacimiento: {
       type: Date
     },
-
     telefono: {
       type: String,
       trim: true,
       default: ""
     },
-
     direccion: {
       type: String,
       trim: true,
       default: ""
     },
-
     institucion: {
       type: String,
       trim: true,
@@ -35,10 +31,23 @@ const estudianteSchema = new mongoose.Schema(
       enum: ["1ro BGU", "2do BGU", "3ro BGU"],
       default: ""
     },
+    materiasPreferidas:[
+      {
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Materia"
+      }
+    ],
+    temasPreferidas:[
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "Tema"
+      }
+    ]
+
   },
   {
     timestamps: true
   }
 );
 
-export default mongoose.model("Estudiante", estudianteSchema);
+export default mongoose.model( "Estudiante", estudianteSchema);
