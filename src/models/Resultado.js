@@ -63,6 +63,16 @@ const resultadoSchema = new mongoose.Schema(
         default:0
     },
 
+    porcentaje:{
+        type:Number,
+        default:0
+    },
+
+    aprobado:{
+        type:Boolean,
+        default:false
+    },
+
     tiempoEmpleado:{
         type:Number,
         default:0
