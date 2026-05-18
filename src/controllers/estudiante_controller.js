@@ -505,6 +505,60 @@ const obtenerRecursosPorTema = async (req, res) => {
 
     }
 };
+//OBTENER UN RECURSO DE UN TEMA
+const obtenerRecursoPorId = async(req,res)=>{
+    try {
+        const {id} = req.params;
+
+        const usuario = await Usuario.findById(req.usuario.id);
+
+        if(!usuario){
+            return res.status(404).json({
+                msg: "Usuario no encontrado"
+            })
+        }
+        if(usuario.rol !== "estudiante"){
+            return res.status(403).json({
+                msg: "Acceso solo estudiantes"
+            });
+        }
+        const estudiante = await Estudiante.findOne({
+            usuario:usuario._id
+        });
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil de estudiante no encontrado"
+            });
+        }
+        const recurso = await Recurso.findById(id)
+                        .populate({
+                            path:"tema",
+                            populate:{
+                                path:"materia",
+                                select:"nombre"
+                            }
+                        })
+         if(!recurso || !recurso.estado){
+            return res.status(404).json({
+                msg:"Recurso no encontrado"
+            });
+        }
+        // VALIDAR NIVEL ACADÉMICO
+        const tema = await Tema.findById(recurso.tema._id);
+
+        if( tema.nivelAcademico !== estudiante.nivelAcademico ){
+            return res.status(403).json({
+                msg:"Recurso no disponible para su nivel"
+            });
+        }
+        res.status(200).json(recurso);
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg:"Error al obtener recurso"
+        });        
+    }
+}
 // OBTENER RESULTADOS
 const obtenerResultadosEstudiante = async (req, res) => {
     try {
@@ -717,5 +771,5 @@ const quitarTemaFavorito = async(req,res)=>{
 };
 export { completarPerfilEstudiante, obtenerPerfilEstudiante, actualizarPerfilEstudiante, obtenerMateriasEstudiante,
          agregarMateriaFavorita, quitarMateriaFavorita, obtenerTemasPorMateria, obtenerRecursosPorTema, obtenerResultadosEstudiante,
-         obtenerResultadoEstudianteID,  agregarTemaFavorito, quitarTemaFavorito
+         obtenerResultadoEstudianteID,  agregarTemaFavorito, quitarTemaFavorito, obtenerRecursoPorId
        };
