@@ -30,6 +30,16 @@ const preguntaSchema = new mongoose.Schema(
         required:true
     },
 
+    nivelAcademico:{
+        type:String,
+        enum:[
+            "1ro BGU",
+            "2do BGU",
+            "3ro BGU"
+        ],
+        required:true
+    },
+
     opciones:[
         {
             texto:{

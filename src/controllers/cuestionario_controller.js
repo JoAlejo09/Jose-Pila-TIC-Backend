@@ -1,62 +1,199 @@
+// El usuario pueda crear un cuestionario/evaluacion
+
 import Cuestionario from "../models/Cuestionario.js";
 import Pregunta from "../models/Pregunta.js";
 import Resultado from "../models/Resultado.js";
+import Estudiante from "../models/Estudiante.js";
+import Tema from "../models/Tema.js";
 
 
+// ============================================
 // CREAR CUESTIONARIO
+// ============================================
 const crearCuestionario = async(req,res)=>{
-    try {
-        const { titulo, descripcion, instrucciones, materia, tema,
-                tipoEvaluacion, modoGeneracion, preguntas, cantidadPreguntas,
-                tiempoLimite, nivel, mostrarRevision } = req.body;
 
+    try {
+
+        let {
+            titulo,
+            descripcion,
+            instrucciones,
+            materia,
+            tema,
+            nivelAcademico,
+            tipoEvaluacion,
+            tipoCuestionario,
+            modoGeneracion,
+            preguntas,
+            cantidadPreguntas,
+            tiempoLimite,
+            nivel,
+            aleatorio,
+            mostrarRevision,
+            mostrarRespuestasCorrectas,
+            permitirReintento
+        } = req.body;
+
+
+        // ============================================
+        // VALIDAR CAMPOS OBLIGATORIOS
+        // ============================================
         if(
             !titulo ||
             !materia ||
             !tipoEvaluacion ||
             !modoGeneracion ||
-            !cantidadPreguntas
+            !cantidadPreguntas ||
+            !nivelAcademico
         ){
-
             return res.status(400).json({
                 msg:"Campos obligatorios"
             });
-
         }
 
 
+        // ============================================
+        // VALIDAR NIVEL ACADEMICO
+        // ============================================
+        const nivelesValidos = [
+            "1ro BGU",
+            "2do BGU",
+            "3ro BGU"
+        ];
+
+        if(!nivelesValidos.includes(nivelAcademico)){
+            return res.status(400).json({
+                msg:"Nivel académico inválido"
+            });
+        }
+
+
+        // ============================================
+        // SI ES EVALUACION GENERAL DE MATERIA
+        // ============================================
+        if(tipoEvaluacion === "materia"){
+            tema = null;
+        }
+
+
+        // ============================================
+        // VALIDAR TEMA
+        // ============================================
+        if(tipoEvaluacion === "tema"){
+
+            if(!tema){
+                return res.status(400).json({
+                    msg:"Debe seleccionar un tema"
+                });
+            }
+
+            const temaExiste = await Tema.findById(tema);
+
+            if(!temaExiste){
+                return res.status(404).json({
+                    msg:"Tema no encontrado"
+                });
+            }
+
+            if(
+                temaExiste.materia.toString()
+                !==
+                materia.toString()
+            ){
+                return res.status(400).json({
+                    msg:"El tema no pertenece a la materia"
+                });
+            }
+
+            if(
+                temaExiste.nivelAcademico
+                !==
+                nivelAcademico
+            ){
+                return res.status(400).json({
+                    msg:"El nivel académico no coincide con el tema"
+                });
+            }
+        }
+
+
+        // ============================================
+        // NIVEL FINAL
+        // ============================================
+        const nivelFinal = nivel || "medio";
+
+
+        // ============================================
+        // PREGUNTAS SELECCIONADAS
+        // ============================================
         let preguntasSeleccionadas = [];
 
 
-        // CUESTIONARIO MANUAL
+        // ============================================
+        // GENERACION MANUAL
+        // ============================================
         if(modoGeneracion === "manual"){
 
             if(!preguntas || preguntas.length === 0){
-
                 return res.status(400).json({
                     msg:"Debe seleccionar preguntas"
                 });
-
             }
 
-            preguntasSeleccionadas = preguntas;
-
-        }
-
-
-        // CUESTIONARIO DINAMICO
-        if(modoGeneracion === "dinamico"){
-
-            let filtroPreguntas = {
-                materia,
+            const filtroPreguntas = {
+                _id:{ $in:preguntas },
                 estado:true,
-                nivelDificultad:nivel
+                materia,
+                nivelAcademico
             };
 
             if(tipoEvaluacion === "tema"){
-
                 filtroPreguntas.tema = tema;
+            }
 
+            const preguntasDB = await Pregunta.find(
+                filtroPreguntas
+            );
+
+            if(
+                preguntasDB.length !== preguntas.length
+            ){
+                return res.status(400).json({
+                    msg:"Existen preguntas inválidas"
+                });
+            }
+
+            preguntasSeleccionadas =
+                preguntasDB.map(
+                    pregunta => pregunta._id
+                );
+
+            if(
+                preguntasSeleccionadas.length
+                !==
+                Number(cantidadPreguntas)
+            ){
+                return res.status(400).json({
+                    msg:"La cantidad de preguntas no coincide"
+                });
+            }
+        }
+
+
+        // ============================================
+        // GENERACION DINAMICA
+        // ============================================
+        if(modoGeneracion === "dinamico"){
+
+            const filtroPreguntas = {
+                materia,
+                estado:true,
+                nivelAcademico,
+                nivelDificultad:nivelFinal
+            };
+
+            if(tipoEvaluacion === "tema"){
+                filtroPreguntas.tema = tema;
             }
 
             const preguntasDB = await Pregunta.aggregate([
@@ -70,27 +207,35 @@ const crearCuestionario = async(req,res)=>{
                 }
             ]);
 
-            if(preguntasDB.length < cantidadPreguntas){
-
+            if(
+                preguntasDB.length
+                <
+                Number(cantidadPreguntas)
+            ){
                 return res.status(400).json({
                     msg:`Solo existen ${preguntasDB.length} preguntas disponibles`
                 });
-
             }
 
             preguntasSeleccionadas =
                 preguntasDB.map(
                     pregunta => pregunta._id
                 );
-
         }
 
 
+        // ============================================
+        // CREAR CUESTIONARIO
+        // ============================================
         const cuestionario = new Cuestionario({
 
-            titulo,
-            descripcion,
-            instrucciones,
+            titulo:titulo.trim(),
+
+            descripcion:
+                descripcion?.trim() || "",
+
+            instrucciones:
+                instrucciones?.trim() || "",
 
             materia,
 
@@ -99,31 +244,43 @@ const crearCuestionario = async(req,res)=>{
                 ? tema
                 : null,
 
+            nivelAcademico,
+
             tipoEvaluacion,
+
+            tipoCuestionario:
+                tipoCuestionario || "practica",
 
             modoGeneracion,
 
             preguntas:preguntasSeleccionadas,
 
-            cantidadPreguntas,
+            cantidadPreguntas:
+                Number(cantidadPreguntas),
 
-            tiempoLimite,
+            tiempoLimite:
+                tiempoLimite || 30,
 
-            nivel,
+            nivel:nivelFinal,
 
-            mostrarRevision
+            aleatorio:
+                aleatorio || false,
 
+            mostrarRevision:
+                mostrarRevision ?? true,
+
+            mostrarRespuestasCorrectas:
+                mostrarRespuestasCorrectas ?? true,
+
+            permitirReintento:
+                permitirReintento || false
         });
-
 
         await cuestionario.save();
 
-
         res.status(201).json({
-
             msg:"Cuestionario creado correctamente",
             cuestionario
-
         });
 
     } catch (error) {
@@ -133,25 +290,21 @@ const crearCuestionario = async(req,res)=>{
         res.status(500).json({
             msg:"Error al crear cuestionario"
         });
-
     }
-
 };
 
 
+// ============================================
 // OBTENER CUESTIONARIOS
+// ============================================
 const obtenerCuestionarios = async(req,res)=>{
 
     try {
 
         const cuestionarios = await Cuestionario.find()
-
         .populate("materia","nombre")
-
         .populate("tema","nombre")
-
         .sort({createdAt:-1});
-
 
         res.json(cuestionarios);
 
@@ -162,38 +315,47 @@ const obtenerCuestionarios = async(req,res)=>{
         res.status(500).json({
             msg:"Error al obtener cuestionarios"
         });
-
     }
-
 };
 
 
-// OBTENER CUESTIONARIOS DISPONIBLES
+// ============================================
+// CUESTIONARIOS DISPONIBLES
+// ============================================
 const obtenerCuestionariosDisponibles = async(req,res)=>{
 
     try {
 
+        const estudiante = await Estudiante.findOne({
+            usuario:req.usuario._id
+        });
+
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil Estudiante no encontrado"
+            });
+        }
+
         const cuestionarios = await Cuestionario.find({
-            estado:true
+            estado:true,
+            nivelAcademico:
+                estudiante.nivelAcademico
         })
-
         .populate("materia","nombre")
-
         .populate("tema","nombre")
-
         .select(`
             titulo
             descripcion
             instrucciones
             tipoEvaluacion
+            tipoCuestionario
             cantidadPreguntas
             tiempoLimite
             nivel
+            nivelAcademico
             createdAt
         `)
-
         .sort({createdAt:-1});
-
 
         res.json(cuestionarios);
 
@@ -202,28 +364,59 @@ const obtenerCuestionariosDisponibles = async(req,res)=>{
         console.log(error);
 
         res.status(500).json({
-            msg:"Error al obtener cuestionarios disponibles"
+            msg:"Error al obtener los cuestionarios disponibles"
         });
-
     }
-
 };
 
 
-// OBTENER CUESTIONARIO POR ID
-const obtenerCuestionarioID = async(req,res)=>{
+// ============================================
+// OBTENER CUESTIONARIO ADMIN
+// ============================================
+const obtenerCuestionarioAdminID = async(req,res)=>{
 
     try {
 
         const {id} = req.params;
 
+        const cuestionario = await Cuestionario.findById(id)
+        .populate("materia","nombre")
+        .populate("tema","nombre")
+        .populate({
+            path:"preguntas"
+        });
+
+        if(!cuestionario){
+            return res.status(404).json({
+                msg:"Cuestionario no encontrado"
+            });
+        }
+
+        res.json(cuestionario);
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.status(500).json({
+            msg:"Error al obtener cuestionario"
+        });
+    }
+};
+
+
+// ============================================
+// OBTENER CUESTIONARIO PARA RESOLVER
+// ============================================
+const obtenerCuestionarioResolver = async(req,res)=>{
+
+    try {
+
+        const {id} = req.params;
 
         const cuestionario = await Cuestionario.findById(id)
-
         .populate("materia","nombre")
-
         .populate("tema","nombre")
-
         .populate({
             path:"preguntas",
             select:`
@@ -235,24 +428,43 @@ const obtenerCuestionarioID = async(req,res)=>{
             `
         });
 
-
         if(!cuestionario){
-
             return res.status(404).json({
                 msg:"Cuestionario no encontrado"
             });
-
         }
 
-
         if(!cuestionario.estado){
-
             return res.status(400).json({
                 msg:"Cuestionario no disponible"
             });
-
         }
 
+        if(cuestionario.aleatorio){
+            cuestionario.preguntas.sort(
+                ()=> Math.random() - 0.5
+            );
+        }
+
+        const estudiante = await Estudiante.findOne({
+            usuario:req.usuario._id
+        });
+
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil estudiante no encontrado"
+            });
+        }
+
+        if(
+            cuestionario.nivelAcademico
+            !==
+            estudiante.nivelAcademico
+        ){
+            return res.status(403).json({
+                msg:"El cuestionario no corresponde a su año academico"
+            });
+        }
 
         res.json(cuestionario);
 
@@ -263,13 +475,13 @@ const obtenerCuestionarioID = async(req,res)=>{
         res.status(500).json({
             msg:"Error al obtener cuestionario"
         });
-
     }
-
 };
 
 
+// ============================================
 // RESOLVER CUESTIONARIO
+// ============================================
 const resolverCuestionario = async(req,res)=>{
 
     try {
@@ -281,27 +493,64 @@ const resolverCuestionario = async(req,res)=>{
             tiempoEmpleado
         } = req.body;
 
-
         const cuestionario = await Cuestionario.findById(id)
-
         .populate("preguntas");
 
-
         if(!cuestionario){
-
             return res.status(404).json({
                 msg:"Cuestionario no encontrado"
             });
-
         }
 
+        const estudiante = await Estudiante.findOne({
+            usuario:req.usuario._id
+        });
+
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil de estudiante no encontrado"
+            });
+        }
+
+        if(
+            cuestionario.nivelAcademico
+            !==
+            estudiante.nivelAcademico
+        ){
+            return res.status(403).json({
+                msg:"El cuestionario no corresponde a su año academico"
+            });
+        }
+
+        if(
+            tiempoEmpleado >
+            cuestionario.tiempoLimite * 60
+        ){
+            return res.status(400).json({
+                msg:"Tiempo excedido"
+            });
+        }
+
+        const resultadoExistente =
+            await Resultado.findOne({
+                estudiante:req.usuario._id,
+                cuestionario:id
+            });
+
+        if(
+            resultadoExistente &&
+            !cuestionario.permitirReintento
+        ){
+            return res.status(400).json({
+                msg:"Ya resolviste este cuestionario"
+            });
+        }
 
         let correctas = 0;
         let incorrectas = 0;
         let sinResponder = 0;
 
         const detalleRespuestas = [];
-
 
         for(const pregunta of cuestionario.preguntas){
 
@@ -315,19 +564,13 @@ const resolverCuestionario = async(req,res)=>{
             const respuestaUsuario =
                 respuestaEncontrada?.respuestaUsuario || "";
 
-
             let esCorrecta = false;
 
-
-            // SIN RESPONDER
             if(!respuestaUsuario){
 
                 sinResponder++;
 
-            }
-
-            // CORRECTA
-            else if(
+            }else if(
 
                 respuestaUsuario
                     .toString()
@@ -346,15 +589,10 @@ const resolverCuestionario = async(req,res)=>{
                 correctas++;
                 esCorrecta = true;
 
-            }
-
-            // INCORRECTA
-            else{
+            }else{
 
                 incorrectas++;
-
             }
-
 
             detalleRespuestas.push({
 
@@ -369,21 +607,17 @@ const resolverCuestionario = async(req,res)=>{
 
                 explicacion:
                     pregunta.explicacion || ""
-
             });
-
         }
 
-
         const puntaje = Number(
-
             (
-                (correctas / cuestionario.preguntas.length)
-                * 100
+                (
+                    correctas /
+                    cuestionario.preguntas.length
+                ) * 100
             ).toFixed(2)
-
         );
-
 
         const resultado = new Resultado({
 
@@ -402,32 +636,33 @@ const resolverCuestionario = async(req,res)=>{
             puntaje,
 
             tiempoEmpleado
-
         });
 
-
         await resultado.save();
-
 
         res.json({
 
             msg:"Cuestionario resuelto correctamente",
 
             resultado:{
-
                 correctas,
                 incorrectas,
                 sinResponder,
                 puntaje,
                 tiempoEmpleado
-
             },
 
             revision:
                 cuestionario.mostrarRevision
-                ? detalleRespuestas
+                ? detalleRespuestas.map((r)=>({
+                    ...r,
+                    respuestaCorrecta:
+                        cuestionario
+                            .mostrarRespuestasCorrectas
+                        ? r.respuestaCorrecta
+                        : undefined
+                }))
                 : []
-
         });
 
     } catch (error) {
@@ -437,80 +672,54 @@ const resolverCuestionario = async(req,res)=>{
         res.status(500).json({
             msg:"Error al resolver cuestionario"
         });
-
     }
-
 };
 
 
-// ACTUALIZAR
+// ============================================
+// ACTUALIZAR CUESTIONARIO
+// ============================================
 const actualizarCuestionario = async(req,res)=>{
 
     try {
 
         const {id} = req.params;
 
-        const {
-            titulo,
-            descripcion,
-            instrucciones,
-            tiempoLimite,
-            nivel,
-            mostrarRevision,
-            estado
-        } = req.body;
-
-
         const cuestionario =
             await Cuestionario.findById(id);
 
-
         if(!cuestionario){
-
             return res.status(404).json({
                 msg:"Cuestionario no encontrado"
             });
-
         }
 
+        const camposPermitidos = [
+            "titulo",
+            "descripcion",
+            "instrucciones",
+            "tiempoLimite",
+            "nivel",
+            "aleatorio",
+            "mostrarRevision",
+            "mostrarRespuestasCorrectas",
+            "permitirReintento",
+            "estado"
+        ];
 
-        if(titulo !== undefined){
-            cuestionario.titulo = titulo;
-        }
+        camposPermitidos.forEach((campo)=>{
 
-        if(descripcion !== undefined){
-            cuestionario.descripcion = descripcion;
-        }
-
-        if(instrucciones !== undefined){
-            cuestionario.instrucciones = instrucciones;
-        }
-
-        if(tiempoLimite !== undefined){
-            cuestionario.tiempoLimite = tiempoLimite;
-        }
-
-        if(nivel !== undefined){
-            cuestionario.nivel = nivel;
-        }
-
-        if(typeof mostrarRevision === "boolean"){
-            cuestionario.mostrarRevision = mostrarRevision;
-        }
-
-        if(typeof estado === "boolean"){
-            cuestionario.estado = estado;
-        }
-
+            if(req.body[campo] !== undefined){
+                cuestionario[campo] =
+                    req.body[campo];
+            }
+        });
 
         await cuestionario.save();
 
-
         res.json({
-
             msg:"Cuestionario actualizado correctamente",
             cuestionario
-
         });
 
     } catch (error) {
@@ -520,41 +729,59 @@ const actualizarCuestionario = async(req,res)=>{
         res.status(500).json({
             msg:"Error al actualizar cuestionario"
         });
-
     }
 };
 
+// ============================================
+// CAMBIAR ESTADO CUESTIONARIO
+// ============================================
 const eliminarCuestionario = async(req,res)=>{
-    try {
-        const {id} = req.params;
 
-        const cuestionario = await Cuestionario.findById(id);
+    try {
+
+        const { id } = req.params;
+
+        const cuestionario =
+            await Cuestionario.findById(id);
 
         if(!cuestionario){
             return res.status(404).json({
                 msg:"Cuestionario no encontrado"
             });
         }
-        cuestionario.estado = false;
+
+        // TOGGLE ESTADO
+        cuestionario.estado =
+            !cuestionario.estado;
 
         await cuestionario.save();
 
         res.json({
-            msg:"Cuestionario eliminado correctamente"
+            msg:`Cuestionario ${
+                cuestionario.estado
+                ? "activado"
+                : "desactivado"
+            } correctamente`,
+            cuestionario
         });
+
     } catch (error) {
+
         console.log(error);
+
         res.status(500).json({
-            msg:"Error al eliminar cuestionario"
+            msg:"Error al cambiar estado del cuestionario"
         });
     }
 };
+
 
 export {
     crearCuestionario,
     obtenerCuestionarios,
     obtenerCuestionariosDisponibles,
-    obtenerCuestionarioID,
+    obtenerCuestionarioAdminID,
+    obtenerCuestionarioResolver,
     resolverCuestionario,
     actualizarCuestionario,
     eliminarCuestionario

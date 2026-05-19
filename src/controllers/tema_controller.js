@@ -213,4 +213,47 @@ const cambiarEstadoTema = async(req,res)=>{
         });
     }
 }
-export {obtenerTemas, obtenerTemaID, crearTema, actualizarTema, cambiarEstadoTema}
+const obtenerTemasPorMateriaNivel = async(req, res)=>{
+    try {
+        const { materiaId, nivelAcademico}= req.params;
+        const temas = await Tema.find({
+            materia:materiaId,
+            nivelAcademico,
+            estado:true
+        }).sort({nombre:1});
+
+        res.status(200).json(temas);
+    } catch (error) {
+        console.log(error)
+        res.status(400).json({
+            msg:"Error al obtener temas"
+        })
+    }
+}
+const obtenerTemasPorMateria = async(req,res)=>{
+    try {
+
+        const { materiaId } = req.params;
+
+        const temas = await Tema.find({
+            materia: materiaId,
+            estado:true
+        })
+        .sort({ nombre:1 });
+
+        res.status(200).json(temas);
+
+    } catch (error) {
+
+        console.log(error);
+
+        res.status(500).json({
+            msg:"Error al obtener temas"
+        });
+
+    }
+};
+export {obtenerTemas, obtenerTemaID, crearTema, actualizarTema, cambiarEstadoTema,
+        obtenerTemasPorMateriaNivel, obtenerTemasPorMateria
+
+}

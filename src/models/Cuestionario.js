@@ -30,6 +30,16 @@ const cuestionarioSchema = new mongoose.Schema(
         default:null
     },
 
+    nivelAcademico:{
+        type:String,
+        enum:[
+            "1ro BGU",
+            "2do BGU",
+            "3ro BGU"
+        ],
+        required:true
+    },
+
     tipoEvaluacion:{
         type:String,
         enum:[
@@ -53,10 +63,10 @@ const cuestionarioSchema = new mongoose.Schema(
     modoGeneracion:{
         type:String,
         enum:[
-            "fijo",
+            "manual",
             "dinamico"
         ],
-        default:"fijo"
+        default:"manual"
     },
 
     preguntas:[

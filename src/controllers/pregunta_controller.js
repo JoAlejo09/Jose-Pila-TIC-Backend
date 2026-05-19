@@ -7,9 +7,10 @@ import Tema from "../models/Tema.js";
 const crearPregunta = async(req,res)=>{
     try {
         const { enunciado,  tipoPregunta, opciones, respuestaCorrecta, explicacion, materia,
-                tema, nivelDificultad, recursoApoyo } = req.body;
+                tema, nivelAcademico, nivelDificultad, recursoApoyo } = req.body;
 
-        if( !enunciado || !tipoPregunta || !respuestaCorrecta || !materia || !tema ){
+        if( !enunciado || !tipoPregunta || !respuestaCorrecta || 
+            !materia || !tema || !nivelAcademico ){
             return res.status(400).json({
                 msg:"Campos obligatorios incompletos"
             });
@@ -30,6 +31,17 @@ const crearPregunta = async(req,res)=>{
                 msg:"Tema no encontrado"
             });
         }
+        if(temaExiste.nivelAcademico !== nivelAcademico){
+            return res.status(400).json({
+                msg:"El nivel academico no coincide con el tema"
+            });
+        }
+        const nivelesValidos = [ "1ro BGU", "2do BGU", "3ro BGU"];
+        if(!nivelesValidos.includes(nivelAcademico)){
+            return res.status(400).json({
+                msg:"Nivel academico invalido"
+            });
+        }
 
         let opcionesFinales = opciones || [];
 
@@ -42,13 +54,22 @@ const crearPregunta = async(req,res)=>{
                     msg:"La pregunta debe tener mínimo 2 opciones"
                 });
             }
-            if( !opcionesFinales.includes( respuestaCorrecta ) ){
+            const existeRespuesta = opcionesFinales.some(
+                (opcion)=>
+                    opcion.texto.trim().toLowerCase()
+                    ===
+                    respuestaCorrecta.trim().toLowerCase()
+            );
+            if(!existeRespuesta){
                 return res.status(400).json({
                     msg:"La respuesta correcta no existe en las opciones"
                 });
             }
         }
-
+        let recursoFinal = undefined;
+        if( recursoApoyo && recursoApoyo.tipo && recursoApoyo.tipo.trim() !== ""){
+            recursoFinal = recursoApoyo;
+        }
         const pregunta = new Pregunta({
             enunciado: enunciado.trim(),
             tipoPregunta,
@@ -57,8 +78,9 @@ const crearPregunta = async(req,res)=>{
             explicacion: explicacion?.trim() || "",
             materia,
             tema,
+            nivelAcademico,
             nivelDificultad,
-            recursoApoyo
+            recursoApoyo: recursoFinal
         });
 
         await pregunta.save();
@@ -143,7 +165,7 @@ const actualizarPregunta = async(req,res)=>{
         }
 
         const { enunciado, tipoPregunta, opciones, respuestaCorrecta, explicacion, materia,
-                tema, nivelDificultad, recursoApoyo, estado } = req.body;
+                tema, nivelAcademico, nivelDificultad, recursoApoyo, estado } = req.body;
 
         let opcionesFinales = opciones || pregunta.opciones;
 
@@ -157,11 +179,19 @@ const actualizarPregunta = async(req,res)=>{
                     msg:"La pregunta debe tener opciones válidas"
                 });
             }
-            if( respuestaCorrecta && !opcionesFinales.includes( respuestaCorrecta)){
-                return res.status(400).json({
-                    msg:"La respuesta correcta no existe en las opciones"
-                });
-            }
+            if(respuestaCorrecta){
+                const existeRespuesta = opcionesFinales.some(
+                    (opcion)=>
+                        opcion.texto.trim().toLowerCase()
+                        ===
+                        respuestaCorrecta.trim().toLowerCase()
+                    );
+                if(!existeRespuesta){
+                    return res.status(400).json({
+                        msg:"La respuesta correcta no existe en las opciones"
+                    });
+    }
+}
         }
 
         if(enunciado !== undefined){
@@ -186,8 +216,31 @@ const actualizarPregunta = async(req,res)=>{
         if(nivelDificultad !== undefined){
             pregunta.nivelDificultad = nivelDificultad;
         }
+        if(nivelAcademico !== undefined){
+            const nivelesValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
+            if(!nivelesValidos.includes(nivelAcademico)){
+                return res.status(400).json({
+                    msg:"El nivel academico es invalido"
+                });
+            }
+            pregunta.nivelAcademico = nivelAcademico;
+        }
+        
+        //Validar que concuerden el año escolar de la pregunta con el año escolar del tema
+        const temaValidacion = await Tema.findById(pregunta.tema);
+        if(temaValidacion && temaValidacion.nivelAcademico !== pregunta.nivelAcademico){
+            return res.status(400).json({
+                msg:"El nivel academico no coincide con el tema"
+            })
+        }
         if(recursoApoyo !== undefined){
-            pregunta.recursoApoyo = recursoApoyo;
+            if(recursoApoyo.tipo &&
+                recursoApoyo.tipo.trim !==""
+            ){
+                pregunta.recursoApoyo = recursoApoyo;
+            }else{
+                pregunta.recursoApoyo = undefined;
+            }
         }
         if(typeof estado === "boolean"){
             pregunta.estado = estado;
