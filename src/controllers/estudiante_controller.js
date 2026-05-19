@@ -559,100 +559,6 @@ const obtenerRecursoPorId = async(req,res)=>{
         });        
     }
 }
-// OBTENER RESULTADOS
-const obtenerResultadosEstudiante = async (req, res) => {
-    try {
-
-        const resultados = await Resultado.find({
-            estudiante: req.usuario._id
-        })
-        .populate({
-            path: "cuestionario",
-            select: `titulo tipoEvaluacion nivel materia tema`,
-            populate: [
-                {
-                    path: "materia",
-                    select: "nombre"
-                },
-                {
-                    path: "tema",
-                    select: "nombre"
-                }
-            ]
-        })
-        .sort({ createdAt: -1 });
-
-        res.status(200).json(resultados);
-
-    } catch (error) {
-
-        console.log(error);
-
-        res.status(500).json({
-            msg: "Error al obtener resultados"
-        });
-
-    }
-};
-// OBTENER RESULTADO POR ID
-const obtenerResultadoEstudianteID = async (req, res) => {
-    try {
-
-        const { id } = req.params;
-
-        const resultado = await Resultado.findById(id)
-        .populate({
-            path: "cuestionario",
-            select: `
-                titulo descripcion instrucciones
-                tipoEvaluacion nivel materia tema
-            `,
-            populate: [
-                {
-                    path: "materia",
-                    select: "nombre"
-                },
-                {
-                    path: "tema",
-                    select: "nombre"
-                }
-            ]
-        })
-        .populate({
-            path: "respuesta.pregunta",
-            select: `
-                enunciado tipoPregunta
-                opciones recursoApoyo
-            `
-        });
-
-        if (!resultado) {
-            return res.status(404).json({
-                msg: "Resultado no encontrado"
-            });
-        }
-
-        if (
-            resultado.estudiante.toString() !==
-            req.usuario._id.toString()
-        ) {
-            return res.status(403).json({
-                msg: "No tiene permisos para ver este resultado"
-            });
-        }
-
-        res.status(200).json(resultado);
-
-    } catch (error) {
-
-        console.log(error);
-
-        res.status(500).json({
-            msg: "Error al obtener resultado"
-        });
-
-    }
-};
 // AGREGAR TEMA FAVORITO
 const agregarTemaFavorito = async(req,res)=>{
     try {
@@ -770,6 +676,6 @@ const quitarTemaFavorito = async(req,res)=>{
     }
 };
 export { completarPerfilEstudiante, obtenerPerfilEstudiante, actualizarPerfilEstudiante, obtenerMateriasEstudiante,
-         agregarMateriaFavorita, quitarMateriaFavorita, obtenerTemasPorMateria, obtenerRecursosPorTema, obtenerResultadosEstudiante,
-         obtenerResultadoEstudianteID,  agregarTemaFavorito, quitarTemaFavorito, obtenerRecursoPorId
+         agregarMateriaFavorita, quitarMateriaFavorita, obtenerTemasPorMateria, obtenerRecursosPorTema, 
+         agregarTemaFavorito, quitarTemaFavorito, obtenerRecursoPorId
        };

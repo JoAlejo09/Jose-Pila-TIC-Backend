@@ -1,65 +1,25 @@
-// El usuario pueda crear un cuestionario/evaluacion
-
 import Cuestionario from "../models/Cuestionario.js";
 import Pregunta from "../models/Pregunta.js";
 import Resultado from "../models/Resultado.js";
 import Estudiante from "../models/Estudiante.js";
 import Tema from "../models/Tema.js";
 
-
-// ============================================
 // CREAR CUESTIONARIO
-// ============================================
 const crearCuestionario = async(req,res)=>{
-
     try {
+        const { titulo, descripcion, instrucciones, materia, tema, nivelAcademico, 
+                tipoEvaluacion, tipoCuestionario, modoGeneracion, preguntas, cantidadPreguntas,
+                tiempoLimite, nivel, aleatorio, mostrarRevision, mostrarRespuestasCorrectas,
+                permitirReintento } = req.body;
 
-        let {
-            titulo,
-            descripcion,
-            instrucciones,
-            materia,
-            tema,
-            nivelAcademico,
-            tipoEvaluacion,
-            tipoCuestionario,
-            modoGeneracion,
-            preguntas,
-            cantidadPreguntas,
-            tiempoLimite,
-            nivel,
-            aleatorio,
-            mostrarRevision,
-            mostrarRespuestasCorrectas,
-            permitirReintento
-        } = req.body;
-
-
-        // ============================================
-        // VALIDAR CAMPOS OBLIGATORIOS
-        // ============================================
-        if(
-            !titulo ||
-            !materia ||
-            !tipoEvaluacion ||
-            !modoGeneracion ||
-            !cantidadPreguntas ||
-            !nivelAcademico
-        ){
-            return res.status(400).json({
-                msg:"Campos obligatorios"
+        if( !titulo || !materia || !tipoEvaluacion || !modoGeneracion || 
+            !cantidadPreguntas || !nivelAcademico ){
+                return res.status(400).json({
+                    msg:"Campos obligatorios"
             });
         }
 
-
-        // ============================================
-        // VALIDAR NIVEL ACADEMICO
-        // ============================================
-        const nivelesValidos = [
-            "1ro BGU",
-            "2do BGU",
-            "3ro BGU"
-        ];
+        const nivelesValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
 
         if(!nivelesValidos.includes(nivelAcademico)){
             return res.status(400).json({
@@ -67,20 +27,11 @@ const crearCuestionario = async(req,res)=>{
             });
         }
 
-
-        // ============================================
-        // SI ES EVALUACION GENERAL DE MATERIA
-        // ============================================
         if(tipoEvaluacion === "materia"){
             tema = null;
         }
 
-
-        // ============================================
-        // VALIDAR TEMA
-        // ============================================
         if(tipoEvaluacion === "tema"){
-
             if(!tema){
                 return res.status(400).json({
                     msg:"Debe seleccionar un tema"
@@ -95,45 +46,24 @@ const crearCuestionario = async(req,res)=>{
                 });
             }
 
-            if(
-                temaExiste.materia.toString()
-                !==
-                materia.toString()
-            ){
+            if( temaExiste.materia.toString() !== materia.toString()){
                 return res.status(400).json({
                     msg:"El tema no pertenece a la materia"
                 });
             }
 
-            if(
-                temaExiste.nivelAcademico
-                !==
-                nivelAcademico
-            ){
+            if( temaExiste.nivelAcademico !== nivelAcademico){
                 return res.status(400).json({
                     msg:"El nivel académico no coincide con el tema"
                 });
             }
         }
 
-
-        // ============================================
-        // NIVEL FINAL
-        // ============================================
         const nivelFinal = nivel || "medio";
 
-
-        // ============================================
-        // PREGUNTAS SELECCIONADAS
-        // ============================================
         let preguntasSeleccionadas = [];
 
-
-        // ============================================
-        // GENERACION MANUAL
-        // ============================================
         if(modoGeneracion === "manual"){
-
             if(!preguntas || preguntas.length === 0){
                 return res.status(400).json({
                     msg:"Debe seleccionar preguntas"
@@ -155,23 +85,15 @@ const crearCuestionario = async(req,res)=>{
                 filtroPreguntas
             );
 
-            if(
-                preguntasDB.length !== preguntas.length
-            ){
+            if(preguntasDB.length !== preguntas.length){
                 return res.status(400).json({
                     msg:"Existen preguntas inválidas"
-                });
-            }
+                });}
 
-            preguntasSeleccionadas =
-                preguntasDB.map(
+            preguntasSeleccionadas = preguntasDB.map(
                     pregunta => pregunta._id
-                );
-
-            if(
-                preguntasSeleccionadas.length
-                !==
-                Number(cantidadPreguntas)
+            );
+            if( preguntasSeleccionadas.length !== Number(cantidadPreguntas)
             ){
                 return res.status(400).json({
                     msg:"La cantidad de preguntas no coincide"
@@ -179,12 +101,7 @@ const crearCuestionario = async(req,res)=>{
             }
         }
 
-
-        // ============================================
-        // GENERACION DINAMICA
-        // ============================================
         if(modoGeneracion === "dinamico"){
-
             const filtroPreguntas = {
                 materia,
                 estado:true,
@@ -223,57 +140,27 @@ const crearCuestionario = async(req,res)=>{
                 );
         }
 
-
-        // ============================================
-        // CREAR CUESTIONARIO
-        // ============================================
         const cuestionario = new Cuestionario({
 
             titulo:titulo.trim(),
-
-            descripcion:
-                descripcion?.trim() || "",
-
-            instrucciones:
-                instrucciones?.trim() || "",
-
+            descripcion: descripcion?.trim() || "",
+            instrucciones: instrucciones?.trim() || "",
             materia,
-
-            tema:
-                tipoEvaluacion === "tema"
+            tema: tipoEvaluacion === "tema"
                 ? tema
                 : null,
-
             nivelAcademico,
-
             tipoEvaluacion,
-
-            tipoCuestionario:
-                tipoCuestionario || "practica",
-
+            tipoCuestionario: tipoCuestionario || "practica",
             modoGeneracion,
-
             preguntas:preguntasSeleccionadas,
-
-            cantidadPreguntas:
-                Number(cantidadPreguntas),
-
-            tiempoLimite:
-                tiempoLimite || 30,
-
+            cantidadPreguntas: Number(cantidadPreguntas),
+            tiempoLimite: tiempoLimite || 30,
             nivel:nivelFinal,
-
-            aleatorio:
-                aleatorio || false,
-
-            mostrarRevision:
-                mostrarRevision ?? true,
-
-            mostrarRespuestasCorrectas:
-                mostrarRespuestasCorrectas ?? true,
-
-            permitirReintento:
-                permitirReintento || false
+            aleatorio: aleatorio || false,
+            mostrarRevision: mostrarRevision ?? true,
+            mostrarRespuestasCorrectas:mostrarRespuestasCorrectas ?? true,
+            permitirReintento: permitirReintento || false
         });
 
         await cuestionario.save();
@@ -284,23 +171,16 @@ const crearCuestionario = async(req,res)=>{
         });
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al crear cuestionario"
         });
     }
 };
 
-
-// ============================================
-// OBTENER CUESTIONARIOS
-// ============================================
+//Obtener la lista de cuestionarios creados
 const obtenerCuestionarios = async(req,res)=>{
-
     try {
-
         const cuestionarios = await Cuestionario.find()
         .populate("materia","nombre")
         .populate("tema","nombre")
@@ -309,33 +189,25 @@ const obtenerCuestionarios = async(req,res)=>{
         res.json(cuestionarios);
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al obtener cuestionarios"
         });
     }
 };
 
-
-// ============================================
-// CUESTIONARIOS DISPONIBLES
-// ============================================
+//Lista de cuestionarios disponibles para resolver
 const obtenerCuestionariosDisponibles = async(req,res)=>{
-
     try {
-
         const estudiante = await Estudiante.findOne({
-            usuario:req.usuario._id
+            usuario:req.usuario.id
         });
-
+        console.log(req.usuario);
         if(!estudiante){
             return res.status(404).json({
                 msg:"Perfil Estudiante no encontrado"
             });
         }
-
         const cuestionarios = await Cuestionario.find({
             estado:true,
             nivelAcademico:
@@ -343,40 +215,23 @@ const obtenerCuestionariosDisponibles = async(req,res)=>{
         })
         .populate("materia","nombre")
         .populate("tema","nombre")
-        .select(`
-            titulo
-            descripcion
-            instrucciones
-            tipoEvaluacion
-            tipoCuestionario
-            cantidadPreguntas
-            tiempoLimite
-            nivel
-            nivelAcademico
-            createdAt
-        `)
+        .select(`titulo descripcion instrucciones tipoEvaluacion tipoCuestionario
+                 cantidadPreguntas tiempoLimite nivel nivelAcademico createdAt`)
         .sort({createdAt:-1});
 
         res.json(cuestionarios);
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al obtener los cuestionarios disponibles"
         });
     }
 };
 
-
-// ============================================
-// OBTENER CUESTIONARIO ADMIN
-// ============================================
+//Obtener un cuestionario por ID para editar
 const obtenerCuestionarioAdminID = async(req,res)=>{
-
     try {
-
         const {id} = req.params;
 
         const cuestionario = await Cuestionario.findById(id)
@@ -395,23 +250,16 @@ const obtenerCuestionarioAdminID = async(req,res)=>{
         res.json(cuestionario);
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al obtener cuestionario"
         });
     }
 };
 
-
-// ============================================
-// OBTENER CUESTIONARIO PARA RESOLVER
-// ============================================
+//Obtener cuestionario para que el estudiante resuelva
 const obtenerCuestionarioResolver = async(req,res)=>{
-
     try {
-
         const {id} = req.params;
 
         const cuestionario = await Cuestionario.findById(id)
@@ -419,13 +267,7 @@ const obtenerCuestionarioResolver = async(req,res)=>{
         .populate("tema","nombre")
         .populate({
             path:"preguntas",
-            select:`
-                enunciado
-                tipoPregunta
-                opciones
-                recursoApoyo
-                nivelDificultad
-            `
+            select:` enunciado tipoPregunta opciones recursoApoyo nivelDificultad`
         });
 
         if(!cuestionario){
@@ -447,7 +289,7 @@ const obtenerCuestionarioResolver = async(req,res)=>{
         }
 
         const estudiante = await Estudiante.findOne({
-            usuario:req.usuario._id
+            usuario:req.usuario.id
         });
 
         if(!estudiante){
@@ -469,24 +311,19 @@ const obtenerCuestionarioResolver = async(req,res)=>{
         res.json(cuestionario);
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al obtener cuestionario"
         });
     }
 };
 
-
-// ============================================
-// RESOLVER CUESTIONARIO
-// ============================================
+//Guardar informacion que estudiante resuelva
 const resolverCuestionario = async(req,res)=>{
 
     try {
 
-        const {id} = req.params;
+        const { id } = req.params;
 
         const {
             respuestas,
@@ -497,54 +334,85 @@ const resolverCuestionario = async(req,res)=>{
         .populate("preguntas");
 
         if(!cuestionario){
+
             return res.status(404).json({
                 msg:"Cuestionario no encontrado"
             });
+
         }
 
+        // =========================
+        // VALIDAR ESTUDIANTE
+        // =========================
+
         const estudiante = await Estudiante.findOne({
-            usuario:req.usuario._id
+            usuario:req.usuario.id
         });
 
         if(!estudiante){
+
             return res.status(404).json({
                 msg:"Perfil de estudiante no encontrado"
             });
+
         }
+
+        // =========================
+        // VALIDAR NIVEL
+        // =========================
 
         if(
             cuestionario.nivelAcademico
             !==
             estudiante.nivelAcademico
         ){
+
             return res.status(403).json({
-                msg:"El cuestionario no corresponde a su año academico"
+                msg:"El cuestionario no corresponde a su año académico"
             });
+
         }
+
+        // =========================
+        // VALIDAR TIEMPO
+        // =========================
 
         if(
             tiempoEmpleado >
             cuestionario.tiempoLimite * 60
         ){
+
             return res.status(400).json({
                 msg:"Tiempo excedido"
             });
+
         }
 
-        const resultadoExistente =
-            await Resultado.findOne({
-                estudiante:req.usuario._id,
-                cuestionario:id
-            });
+        // =========================
+        // VALIDAR REINTENTO
+        // =========================
+
+        const resultadoExistente = await Resultado.findOne({
+
+            estudiante:req.usuario.id,
+            cuestionario:id
+
+        });
 
         if(
             resultadoExistente &&
             !cuestionario.permitirReintento
         ){
+
             return res.status(400).json({
                 msg:"Ya resolviste este cuestionario"
             });
+
         }
+
+        // =========================
+        // CALCULAR RESULTADOS
+        // =========================
 
         let correctas = 0;
         let incorrectas = 0;
@@ -554,12 +422,12 @@ const resolverCuestionario = async(req,res)=>{
 
         for(const pregunta of cuestionario.preguntas){
 
-            const respuestaEncontrada =
-                respuestas.find(
-                    r =>
-                        r.pregunta ===
-                        pregunta._id.toString()
-                );
+            const respuestaEncontrada = respuestas.find(
+
+                (r)=>
+                    r.pregunta === pregunta._id.toString()
+
+            );
 
             const respuestaUsuario =
                 respuestaEncontrada?.respuestaUsuario || "";
@@ -570,7 +438,9 @@ const resolverCuestionario = async(req,res)=>{
 
                 sinResponder++;
 
-            }else if(
+            }
+
+            else if(
 
                 respuestaUsuario
                     .toString()
@@ -589,9 +459,12 @@ const resolverCuestionario = async(req,res)=>{
                 correctas++;
                 esCorrecta = true;
 
-            }else{
+            }
+
+            else{
 
                 incorrectas++;
+
             }
 
             detalleRespuestas.push({
@@ -607,21 +480,36 @@ const resolverCuestionario = async(req,res)=>{
 
                 explicacion:
                     pregunta.explicacion || ""
+
             });
+
         }
 
-        const puntaje = Number(
+        // =========================
+        // CALCULAR PORCENTAJE
+        // =========================
+
+        const porcentaje = Number(
+
             (
                 (
                     correctas /
                     cuestionario.preguntas.length
                 ) * 100
             ).toFixed(2)
+
         );
+
+        const aprobado = porcentaje >= 70;
+
+        // =========================
+        // GUARDAR RESULTADO
+        // =========================
 
         const resultado = new Resultado({
 
-            estudiante:req.usuario._id,
+            // AQUI ESTABA EL ERROR
+            estudiante:req.usuario.id,
 
             cuestionario:id,
 
@@ -633,60 +521,94 @@ const resolverCuestionario = async(req,res)=>{
 
             sinResponder,
 
-            puntaje,
+            puntaje:porcentaje,
+
+            porcentaje,
+
+            aprobado,
 
             tiempoEmpleado
+
         });
 
         await resultado.save();
+
+        // =========================
+        // RESPUESTA
+        // =========================
 
         res.json({
 
             msg:"Cuestionario resuelto correctamente",
 
             resultado:{
+
                 correctas,
+
                 incorrectas,
+
                 sinResponder,
-                puntaje,
+
+                puntaje:porcentaje,
+
+                porcentaje,
+
+                aprobado,
+
                 tiempoEmpleado
+
             },
 
             revision:
+
                 cuestionario.mostrarRevision
-                ? detalleRespuestas.map((r)=>({
+
+                ?
+
+                detalleRespuestas.map((r)=>({
+
                     ...r,
+
                     respuestaCorrecta:
-                        cuestionario
-                            .mostrarRespuestasCorrectas
-                        ? r.respuestaCorrecta
-                        : undefined
+
+                        cuestionario.mostrarRespuestasCorrectas
+
+                        ?
+
+                        r.respuestaCorrecta
+
+                        :
+
+                        undefined
+
                 }))
-                : []
+
+                :
+
+                []
+
         });
 
-    } catch (error) {
+    }
+
+    catch (error) {
 
         console.log(error);
 
         res.status(500).json({
             msg:"Error al resolver cuestionario"
         });
+
     }
+
 };
 
-
-// ============================================
-// ACTUALIZAR CUESTIONARIO
-// ============================================
+//Editar un cuestionario por admin
 const actualizarCuestionario = async(req,res)=>{
-
     try {
-
         const {id} = req.params;
 
-        const cuestionario =
-            await Cuestionario.findById(id);
+        const cuestionario = await Cuestionario.findById(id);
 
         if(!cuestionario){
             return res.status(404).json({
@@ -694,21 +616,11 @@ const actualizarCuestionario = async(req,res)=>{
             });
         }
 
-        const camposPermitidos = [
-            "titulo",
-            "descripcion",
-            "instrucciones",
-            "tiempoLimite",
-            "nivel",
-            "aleatorio",
-            "mostrarRevision",
-            "mostrarRespuestasCorrectas",
-            "permitirReintento",
-            "estado"
-        ];
+        const camposPermitidos = [ "titulo", "descripcion", "instrucciones", "tiempoLimite", "nivel",
+                                   "aleatorio", "mostrarRevision", "mostrarRespuestasCorrectas", "permitirReintento",
+                                   "estado" ];
 
         camposPermitidos.forEach((campo)=>{
-
             if(req.body[campo] !== undefined){
                 cuestionario[campo] =
                     req.body[campo];
@@ -723,26 +635,19 @@ const actualizarCuestionario = async(req,res)=>{
         });
 
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al actualizar cuestionario"
         });
     }
 };
 
-// ============================================
 // CAMBIAR ESTADO CUESTIONARIO
-// ============================================
 const eliminarCuestionario = async(req,res)=>{
-
     try {
-
         const { id } = req.params;
 
-        const cuestionario =
-            await Cuestionario.findById(id);
+        const cuestionario = await Cuestionario.findById(id);
 
         if(!cuestionario){
             return res.status(404).json({
@@ -750,9 +655,7 @@ const eliminarCuestionario = async(req,res)=>{
             });
         }
 
-        // TOGGLE ESTADO
-        cuestionario.estado =
-            !cuestionario.estado;
+        cuestionario.estado = !cuestionario.estado;
 
         await cuestionario.save();
 
@@ -764,25 +667,13 @@ const eliminarCuestionario = async(req,res)=>{
             } correctamente`,
             cuestionario
         });
-
     } catch (error) {
-
         console.log(error);
-
         res.status(500).json({
             msg:"Error al cambiar estado del cuestionario"
         });
     }
 };
 
-
-export {
-    crearCuestionario,
-    obtenerCuestionarios,
-    obtenerCuestionariosDisponibles,
-    obtenerCuestionarioAdminID,
-    obtenerCuestionarioResolver,
-    resolverCuestionario,
-    actualizarCuestionario,
-    eliminarCuestionario
-};
+export { crearCuestionario, obtenerCuestionarios, obtenerCuestionariosDisponibles, obtenerCuestionarioAdminID,
+         obtenerCuestionarioResolver, resolverCuestionario, actualizarCuestionario, eliminarCuestionario };

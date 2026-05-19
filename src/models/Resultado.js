@@ -84,6 +84,6 @@ const resultadoSchema = new mongoose.Schema(
 });
 
 export default mongoose.model(
-    "ResultadoCuestionario",
+    "Resultado",
     resultadoSchema
 );

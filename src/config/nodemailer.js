@@ -22,47 +22,17 @@ const generarTemplate = ({
 })=>{
 
     return `
-
-        <div style="
-            background:#f3f4f6;
-            padding:40px 20px;
-            font-family:Arial,sans-serif;
-        ">
-
-            <div style="
-                max-width:600px;
-                margin:auto;
-                background:white;
-                border-radius:16px;
-                overflow:hidden;
-                box-shadow:0 4px 15px rgba(0,0,0,0.08);
-            ">
-                <div style="
-                    background:#2563eb;
-                    padding:30px;
-                    text-align:center;
-                    color:white;
-                ">
-
-                    <h1 style="
-                        margin:0;
-                        font-size:28px;
-                    ">
+        <div style=" background:#f3f4f6; padding:40px 20px; font-family:Arial,sans-serif;">
+            <div style=" max-width:600px; margin:auto; background:white; border-radius:16px;
+                overflow:hidden; box-shadow:0 4px 15px rgba(0,0,0,0.08);">
+                <div style="background:#2563eb; padding:30px; text-align:center; color:white; ">
+                    <h1 style=" margin:0; font-size:28px; ">
                         Refuerzo Académico
                     </h1>
-
-                    <p style="
-                        margin-top:10px;
-                        opacity:0.9;
-                    ">
+                    <p style=" margin-top:10px; opacity:0.9; ">
                         Plataforma educativa personalizada
                     </p>
-
                 </div>
-
-
-
-                <!-- CONTENT -->
 
                 <div style="
                     padding:40px 30px;
