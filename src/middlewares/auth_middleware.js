@@ -26,7 +26,7 @@ const verificarJWT = (req,res,next)=>{
         });
     }
 };
-const verificarRol = (...rolesPermitidos)=>{
+/*const verificarRol = (...rolesPermitidos)=>{
     return (req,res,next)=>{
         if(!req.usuario){
             return res.status(401).json({
@@ -38,6 +38,29 @@ const verificarRol = (...rolesPermitidos)=>{
                 msg:"No tiene permisos para realizar esta acción"
             });
         }
+        next();
+    };
+};*/
+const verificarRol = (...rolesPermitidos)=>{
+    return (req,res,next)=>{
+
+        console.log(req.usuario);
+
+        if(!req.usuario){
+            return res.status(401).json({
+                msg:"Usuario no autenticado"
+            });
+        }
+
+        console.log("ROL:", req.usuario.rol);
+        console.log("PERMITIDOS:", rolesPermitidos);
+
+        if(!rolesPermitidos.includes(req.usuario.rol)){
+            return res.status(403).json({
+                msg:"No tiene permisos para realizar esta acción"
+            });
+        }
+
         next();
     };
 };

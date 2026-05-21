@@ -3,11 +3,12 @@ import Pregunta from "../models/Pregunta.js";
 import Resultado from "../models/Resultado.js";
 import Estudiante from "../models/Estudiante.js";
 import Tema from "../models/Tema.js";
+import mongoose, { mongo }  from "mongoose";
 
 // CREAR CUESTIONARIO
 const crearCuestionario = async(req,res)=>{
     try {
-        const { titulo, descripcion, instrucciones, materia, tema, nivelAcademico, 
+        let { titulo, descripcion, instrucciones, materia, tema, nivelAcademico, 
                 tipoEvaluacion, tipoCuestionario, modoGeneracion, preguntas, cantidadPreguntas,
                 tiempoLimite, nivel, aleatorio, mostrarRevision, mostrarRespuestasCorrectas,
                 permitirReintento } = req.body;
@@ -103,14 +104,14 @@ const crearCuestionario = async(req,res)=>{
 
         if(modoGeneracion === "dinamico"){
             const filtroPreguntas = {
-                materia,
+                materia: new mongoose.Types.ObjectId(materia) ,
                 estado:true,
                 nivelAcademico,
                 nivelDificultad:nivelFinal
             };
 
             if(tipoEvaluacion === "tema"){
-                filtroPreguntas.tema = tema;
+                filtroPreguntas.tema =  new mongoose.Types.ObjectId(tema);
             }
 
             const preguntasDB = await Pregunta.aggregate([

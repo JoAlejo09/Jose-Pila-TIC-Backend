@@ -3,8 +3,7 @@ import { Router } from "express";
 import { verificarJWT, verificarRol } from "../middlewares/auth_middleware.js";
 import { completarPerfilEstudiante, obtenerPerfilEstudiante, actualizarPerfilEstudiante,
          obtenerMateriasEstudiante, obtenerTemasPorMateria, obtenerRecursosPorTema,
-         obtenerRecursoPorId, obtenerResultadosEstudiante, obtenerResultadoEstudianteID,
-         agregarMateriaFavorita, quitarMateriaFavorita, agregarTemaFavorito, quitarTemaFavorito
+         obtenerRecursoPorId, agregarMateriaFavorita, quitarMateriaFavorita, agregarTemaFavorito, quitarTemaFavorito
 } from "../controllers/estudiante_controller.js";
 
 const router = Router();
@@ -24,8 +23,6 @@ router.delete( "/favoritos-temas/:id", verificarJWT, verificarRol("estudiante"),
 // RECURSOS
 router.get("/recursos/:temaId", verificarJWT, verificarRol("estudiante"), obtenerRecursosPorTema );
 router.get( "/recurso/:id", verificarJWT, verificarRol("estudiante"), obtenerRecursoPorId );
-// RESULTADOS
-router.get("/resultados", verificarJWT, verificarRol("estudiante"), obtenerResultadosEstudiante);
-router.get("/resultados/:id", verificarJWT, verificarRol("estudiante"), obtenerResultadoEstudianteID);
+
 
 export default router;

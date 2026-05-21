@@ -1,10 +1,44 @@
 import { Router } from "express";
-import { obtenerResultadosEstudiante, obtenerResultadoPorId } from "../controllers/resultado_controller.js";
+import { obtenerResultadosEstudiante, obtenerResultadoPorId, obtenerResultadosAdmin,
+         obtenerResultadoAdminPorId, eliminarResultadoAdmin
+ } from "../controllers/resultado_controller.js";
 import { verificarJWT, verificarRol} from "../middlewares/auth_middleware.js";
-
 const router = Router();
 
-router.get("/mis-resultados",verificarJWT, verificarRol("estudiante"), obtenerResultadosEstudiante);
-router.get("/:id", verificarJWT, verificarRol("estudiante"),obtenerResultadoPorId);
+router.get(
+    "/admin",
+    verificarJWT,
+    verificarRol("admin"),
+    obtenerResultadosAdmin
+);
 
-export default router; 
+router.get(
+    "/admin/:id",
+    verificarJWT,
+    verificarRol("admin"),
+    obtenerResultadoAdminPorId
+);
+
+router.delete(
+    "/admin/:id",
+    verificarJWT,
+    verificarRol("admin"),
+    eliminarResultadoAdmin
+);
+
+router.get(
+    "/mis-resultados",
+    verificarJWT,
+    verificarRol("estudiante","admin"),
+    obtenerResultadosEstudiante
+);
+
+// ESTA SIEMPRE AL FINAL
+router.get(
+    "/:id",
+    verificarJWT,
+    verificarRol("estudiante", "admin"),
+    obtenerResultadoPorId
+);
+
+export default router;
