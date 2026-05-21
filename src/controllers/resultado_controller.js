@@ -213,7 +213,7 @@ const obtenerResultadoAdminPorId = async(req,res)=>{
 
 const eliminarResultadoAdmin = async(req,res)=>{
     try {
-        const id = req.params;
+        const {id} = req.params;
 
         const resultado = await Resultado.findById(id);
 
