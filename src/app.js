@@ -4,6 +4,7 @@ import userRoutes from "./routes/user_routes.js";
 import authRoutes from "./routes/auth_routes.js";
 import perfilRoutes from "./routes/perfil_routes.js";
 import materiaRoutes from "./routes/materia_routes.js";
+import unidadRoutes from "./routes/unidad_routes.js";
 import temaRoutes from "./routes/tema_routes.js";
 import recursoRoutes from "./routes/recurso_routes.js";
 
@@ -32,5 +33,6 @@ app.use("/api/estudiante", estudianteRoutes);
 app.use("/api/cuestionario", cuestionarioRoutes);
 app.use("/api/pregunta", preguntaRoutes);
 app.use("/api/resultado",resultadoRoutes);
+app.use("/api/unidad", unidadRoutes);
 
 export default app;

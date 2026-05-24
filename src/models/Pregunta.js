@@ -56,29 +56,28 @@ const preguntaSchema = new mongoose.Schema(
     },
 
     recursoApoyo:{
-        tipo:{
-            type:String,
-            enum:[
-                "imagen",
-                "video",
-                "pdf",
-                "formula",
-                "enlace"
-            ],
-            default:null
-        },
-
-        url:{
-            type:String,
-            default:null
-        },
-
-        contenido:{
-            type:String,
-            default:null
-        }
+    tipo:{
+        type:String,
+        enum:[
+            "imagen",
+            "video",
+            "pdf",
+            "formula",
+            "enlace"
+        ],
+        default:null
     },
 
+    url:{
+        type:String,
+        default:null
+    },
+
+    contenido:{
+        type:String,
+        default:null
+    }
+},
     explicacion:{
         type:String,
         default:""

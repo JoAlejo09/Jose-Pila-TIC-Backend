@@ -6,21 +6,30 @@ const obtenerRecursos = async(req, res)=>{
         const recursos = await Recurso.find().populate({
             path:"tema",
             populate:{
-                path:"materia",
-                select:"nombre"
+                path:"tema",
+                populate:{
+                    path:"unidad",
+                    populate:{
+                        path:"materia",
+                        select:"nombre"
+                    }
+                }
             }
         }).sort({createdAt: -1});
         res.status(200).json(recursos);
+
     } catch (error) {
         console.log(error);
+
         res.status(500).json({
             msg:"Error al obtener los recursos"
         });
     }
-}
+} 
 const crearRecurso = async(req, res)=>{
     try {
         const {tema, titulo, descripcion, tipo, url, contenido, nivelDificultad} = req.body;
+
         if(!tema || !titulo || !tipo){
             return res.status(400).json({
                 msg:"Campos obligatorios"
@@ -48,7 +57,7 @@ const crearRecurso = async(req, res)=>{
                 msg:"La URL es obigatoria"
             });
         }
-        if(tipo==="contenido" && !contenido){
+        if(tipo === "teoria" && !contenido){
             return res.status(400).json({
                 msg:"El contenido es obligatorio"
             });
@@ -67,14 +76,18 @@ const crearRecurso = async(req, res)=>{
         const recursoGuardado = await Recurso.findById(nuevoRecurso._id).populate({
             path:"tema",
             populate:{
-                path:"materia",
-                select:"nombre"
+                path:"unidad",
+                populate:{
+                    path:"materia",
+                    select:"nombre"
+                }
             }
         });
         res.status(201).json({
             msg:"Recurso creado correctamente",
             recurso: recursoGuardado
         });
+
     } catch (error) {
         res.status(500).json({
             msg:"Error al crear recurso"
@@ -85,6 +98,7 @@ const actualizarRecurso = async(req,res)=>{
     try {
         const {id} = req.params;
         const { tema, titulo, descripcion, tipo, url, contenido, nivelDificultad, estado } = req.body;
+
         const recurso = await Recurso.findById(id);
         if(!recurso){
             return res.status(404).json({
@@ -140,7 +154,7 @@ const actualizarRecurso = async(req,res)=>{
         }
 
         if(descripcion !== undefined){
-            recurso.descripcion = descripcion.trim();
+            recurso.descripcion = descripcion.trim() || "";
         }
 
         if(tipo){ recurso.tipo = tipo; }
@@ -156,12 +170,14 @@ const actualizarRecurso = async(req,res)=>{
 
         await recurso.save();
 
-        // POPULATE
         const recursoActualizado = await Recurso.findById( recurso._id).populate({
                 path:"tema",
                 populate:{
-                    path:"materia",
-                    select:"nombre"
+                    path:"unidad",
+                    populate:{
+                        path:"materia",
+                        select:"nombre"
+                    }
                 }
             });
 
@@ -191,8 +207,11 @@ const cambiarEstadoRecurso = async(req,res)=>{
         const recursoActualizado = await Recurso.findById(recurso._id).populate({
             path:"tema",
             populate:{
-                path:"materia",
-                select:"nombre"
+                path:"unidad",
+                populate:{
+                    path:"materia",
+                    select:"nombre"
+                }
             }
         });
         res.status(200).json({
@@ -215,8 +234,11 @@ const obtenerRecursoID = async(req,res)=>{
         const recurso = await Recurso.findById(id).populate({
             path:"tema",
             populate:{
-                path:"materia",
-                select:"nombre"
+                path:"unidad",
+                populate:{
+                    path:"materia",
+                    select:"nombre"
+                }
             }
         });
         if(!recurso){

@@ -12,7 +12,6 @@ const obtenerResultadosEstudiante = async(req,res)=>{
             select:`
                 titulo
                 tipoEvaluacion
-                tipoCuestionario
                 nivel
                 materia
                 tema

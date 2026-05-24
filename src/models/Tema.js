@@ -2,9 +2,9 @@ import mongoose from "mongoose";
 
 const temaSchema = new mongoose.Schema(
   {
-    materia: {
+    unidad: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Materia",
+      ref: "Unidad",
       required: true
     },
     nombre: {
@@ -17,11 +17,11 @@ const temaSchema = new mongoose.Schema(
       trim: true,
       default: ""
     },
-    nivelAcademico: {
-      type: String,
-      enum: ["1ro BGU", "2do BGU", "3ro BGU"],
-      required: true
+    orden:{
+      type:Number,
+      default:1
     },
+
     estado: {
       type: Boolean,
       default: true
@@ -33,9 +33,8 @@ const temaSchema = new mongoose.Schema(
 );
 temaSchema.index(
   {
-    materia: 1,
-    nombre: 1,
-    nivelAcademico: 1
+    unidad:1,
+    nombre:1
   },
   {
     unique: true

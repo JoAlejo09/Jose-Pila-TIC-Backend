@@ -40,7 +40,7 @@ const cuestionarioSchema = new mongoose.Schema(
         required:true
     },
 
-    tipoEvaluacion:{
+    alcanceEvaluacion:{
         type:String,
         enum:[
             "tema",
@@ -48,16 +48,11 @@ const cuestionarioSchema = new mongoose.Schema(
         ],
         required:true
     },
-
-    tipoCuestionario:{
+    tipoEvaluacion:{
         type:String,
-        enum:[
-            "diagnostico",
-            "practica",
-            "refuerzo",
-            "simulador"
-        ],
-        default:"practica"
+        enum:["diagnostico", "refuerzo"],
+        required: true,
+        default:"diagnostico"
     },
 
     modoGeneracion:{
