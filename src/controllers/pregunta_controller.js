@@ -52,7 +52,8 @@ const crearPregunta = async(req,res)=>{
 
 
         // VALIDAR TEMA
-        const temaExiste = await Tema.findById(tema);
+        const temaExiste = await Tema.findById(tema)
+        .populate("unidad")
 
         if(!temaExiste){
 
@@ -83,7 +84,7 @@ const crearPregunta = async(req,res)=>{
 
         // VALIDAR COINCIDENCIA DE NIVEL
         if(
-            temaExiste.nivelAcademico !== nivelAcademico
+            temaExiste.unidad.nivelAcademico !== nivelAcademico
         ){
 
             return res.status(400).json({

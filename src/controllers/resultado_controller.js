@@ -4,6 +4,7 @@ import Resultado from "../models/Resultado.js";
 const obtenerResultadosEstudiante = async(req,res)=>{
     try {
 
+        console.log(req.usuario.id);
         const resultados = await Resultado.find({
             estudiante:req.usuario.id
         })
@@ -29,6 +30,7 @@ const obtenerResultadosEstudiante = async(req,res)=>{
             ]
         })
         .sort({createdAt:-1});
+
         console.log(resultados)
 
         return res.json(resultados);
@@ -65,7 +67,7 @@ const obtenerResultadoPorId = async(req,res)=>{
         })
         .populate({
             path:"respuestas.pregunta",
-            select:"enunciado"
+            select:`enunciado opciones respuestaCorrecta explicacion`
         });
 
         if(!resultado){

@@ -4,8 +4,6 @@ import Tema from "../models/Tema.js";
 const obtenerRecursos = async(req, res)=>{
     try {
         const recursos = await Recurso.find().populate({
-            path:"tema",
-            populate:{
                 path:"tema",
                 populate:{
                     path:"unidad",
@@ -15,7 +13,7 @@ const obtenerRecursos = async(req, res)=>{
                     }
                 }
             }
-        }).sort({createdAt: -1});
+        ).sort({createdAt: -1});
         res.status(200).json(recursos);
 
     } catch (error) {

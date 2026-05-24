@@ -60,7 +60,7 @@ const crearTema = async(req,res)=>{
             });
         }
         
-        const unidaExiste = await Unidad.findById(unidad);
+        const unidadExiste = await Unidad.findById(unidad);
         if(!unidadExiste){
             return res.status(404).json({
                 msg:"Unidad no encontrada"

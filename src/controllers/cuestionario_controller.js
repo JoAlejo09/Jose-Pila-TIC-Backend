@@ -449,7 +449,7 @@ const resolverCuestionario = async (req, res) => {
         }
 
         const resultadoExistente = await Resultado.findOne({
-                estudiante: estudiante._id,
+                estudiante: req.usuario.id,
                 cuestionario: id
             });
 
@@ -520,7 +520,7 @@ const resolverCuestionario = async (req, res) => {
         }
 
         const resultado = new Resultado({
-            estudiante: estudiante._id,
+            estudiante: req.usuario.id,
             cuestionario: id,
             respuestas: detalleRespuestas,
             correctas,
@@ -538,14 +538,14 @@ const resolverCuestionario = async (req, res) => {
 
         if ( cuestionario.tipoEvaluacion === "diagnostico" ) {
             const diagnosticoExiste = await ResultadoDiagnostico.findOne({
-                    estudiante: estudiante._id,
+                    estudiante: req.usuario.id,
                     materia: cuestionario.materia
                 });
 
             if (!diagnosticoExiste) {
 
                 await ResultadoDiagnostico.create({
-                    estudiante: estudiante._id,
+                    estudiante: req.usuario.id,
                     materia: cuestionario.materia,
                     cuestionario: cuestionario._id,
                     puntaje: porcentaje,

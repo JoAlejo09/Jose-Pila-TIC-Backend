@@ -12,7 +12,7 @@ const unidadSchema = new mongoose.Schema({
     },
     materia:{
         type:mongoose.Schema.Types.ObjectId,
-        ref:"materia",
+        ref:"Materia",
         required:true
     },
     nivelAcademico:{

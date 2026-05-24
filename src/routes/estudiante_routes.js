@@ -2,9 +2,10 @@ import { Router } from "express";
 
 import { verificarJWT, verificarRol } from "../middlewares/auth_middleware.js";
 import { completarPerfilEstudiante, obtenerPerfilEstudiante, actualizarPerfilEstudiante,
-         obtenerMateriasEstudiante, obtenerTemasPorMateria, obtenerRecursosPorTema,
+         obtenerMateriasEstudiante, obtenerTemasPorMateria, obtenerTemasPorUnidad,obtenerRecursosPorTema,
          obtenerRecursoPorId, agregarMateriaFavorita, quitarMateriaFavorita, agregarTemaFavorito, quitarTemaFavorito
 } from "../controllers/estudiante_controller.js";
+
 
 const router = Router();
 
@@ -17,6 +18,7 @@ router.get("/materias", verificarJWT, verificarRol("estudiante"), obtenerMateria
 router.post("/favoritos/:id", verificarJWT, verificarRol("estudiante"), agregarMateriaFavorita);
 router.delete("/favoritos/:id", verificarJWT, verificarRol("estudiante"), quitarMateriaFavorita);
 // TEMAS
+router.get("/temas/unidad/:unidadId",verificarJWT, obtenerTemasPorUnidad);
 router.get("/temas/:materiaId", verificarJWT, verificarRol("estudiante"), obtenerTemasPorMateria);
 router.post( "/favoritos-temas/:id", verificarJWT, verificarRol("estudiante"), agregarTemaFavorito );
 router.delete( "/favoritos-temas/:id", verificarJWT, verificarRol("estudiante"), quitarTemaFavorito );
