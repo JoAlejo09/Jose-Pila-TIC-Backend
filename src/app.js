@@ -14,6 +14,7 @@ import preguntaRoutes from "./routes/pregunta_routes.js";
 import resultadoRoutes from "./routes/resultado_routes.js"
 
 import progresoRoutes from "./routes/progreso_routes.js";
+import recomendacionRoutes from "./routes/recomendacion_routes.js";
 
 const app = express();
 
@@ -39,5 +40,6 @@ app.use("/api/cuestionario", cuestionarioRoutes);
 app.use("/api/pregunta", preguntaRoutes);
 app.use("/api/resultado",resultadoRoutes);
 app.use("/api/progreso", progresoRoutes);
+app.use("/api/recomendacion", recomendacionRoutes);
 
 export default app;

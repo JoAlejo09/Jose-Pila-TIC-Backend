@@ -235,7 +235,26 @@ const eliminarResultadoAdmin = async(req,res)=>{
     }
 }
 
+const obtenerUltimosResultados = async(req,res)=>{
+    try {
+        const resultados = await Resultado.find({
+            estudiante:req.usuario.id
+        })
+        .populate("materia","nombre")
+        .populate("cuestionario", "titulo tipoEvaluacion")
+        .sort({createdAt:-1})
+        .limit(2);
+
+        res.json(resultados)
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({
+            msg:"Error al obtener ultimos resultados"
+        });
+    }
+}
+
 export {
     obtenerResultadosEstudiante, obtenerResultadoPorId, obtenerResultadosAdmin,
-    obtenerResultadoAdminPorId, eliminarResultadoAdmin
+    obtenerResultadoAdminPorId, eliminarResultadoAdmin, obtenerUltimosResultados
 };

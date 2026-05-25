@@ -29,6 +29,7 @@ const obtenerMiProgreso = async(req,res)=>{
 };
 const actualizarProgresoAcademico = async({
     estudianteId,
+    tipoEvaluacion,
     porcentaje,
     aprobado,
     tiempoEmpleado,
@@ -38,9 +39,12 @@ const actualizarProgresoAcademico = async({
 })=>{
 
     try {
+
         let progreso = await ProgresoAcademico.findOne({
             estudiante:estudianteId
         });
+
+        // CREAR SI NO EXISTE
 
         if(!progreso){
 
@@ -49,36 +53,42 @@ const actualizarProgresoAcademico = async({
             });
         }
 
-        progreso.evaluacionesRendidas += 1;
+        // SOLO EVALUACIONES DE REFUERZO
+        // AFECTAN EL PROGRESO GENERAL
 
-        if(aprobado){
-            progreso.evaluacionesAprobadas += 1;
+        if(tipoEvaluacion === "refuerzo"){
+
+            progreso.evaluacionesRendidas += 1;
+
+            if(aprobado){
+                progreso.evaluacionesAprobadas += 1;
+            }
+
+            progreso.promedioGeneral = Number(
+                (
+                    (
+                        progreso.promedioGeneral
+                        *
+                        (
+                            progreso.evaluacionesRendidas - 1
+                        )
+                    )
+                    +
+                    porcentaje
+                )
+                /
+                progreso.evaluacionesRendidas
+            ).toFixed(2);
+
+            progreso.tiempoTotalEstudio += tiempoEmpleado;
         }
 
-        progreso.promedioGeneral = Number(
-            (
-                (
-                    progreso.promedioGeneral
-                    *
-                    (
-                        progreso.evaluacionesRendidas - 1
-                    )
-                )
-                +
-                porcentaje
-            )
-            /
-            progreso.evaluacionesRendidas
-        ).toFixed(2);
-
-
-        progreso.tiempoTotalEstudio += tiempoEmpleado;
+        // DIAGNÓSTICO Y REFUERZO
+        // ACTUALIZAN ANÁLISIS ACADÉMICO
 
         progreso.temasFuertes = temasFuertes;
 
         progreso.temasDebiles = temasDebiles;
-
-        // ACTIVIDAD
 
         progreso.ultimaActividad = new Date();
 
