@@ -1,5 +1,8 @@
+import Estudiante from "../models/Estudiante.js";
 import Recurso from "../models/Recurso.js";
 import Tema from "../models/Tema.js";
+import Unidad from "../models/Unidad.js";
+import { registrarUsoRecurso } from "./progresoacademico_controller.js";
 
 const obtenerRecursos = async(req, res)=>{
     try {
@@ -229,6 +232,15 @@ const cambiarEstadoRecurso = async(req,res)=>{
 const obtenerRecursoID = async(req,res)=>{
     try {
         const {id} = req.params;
+
+        const usuario = await Usuario.findById(req.usuario.id);
+
+        if(!usuario){
+             return res.status(404).json({
+                msg:"Usuario no encontrado"
+            });
+        }
+
         const recurso = await Recurso.findById(id).populate({
             path:"tema",
             populate:{
@@ -239,10 +251,31 @@ const obtenerRecursoID = async(req,res)=>{
                 }
             }
         });
-        if(!recurso){
+        if(!recurso || !recurso.estado){
             return res.status(404).json({
                 msg:"Recurso no encontrado"
             });
+        }
+
+        if(usuario.rol === "estudiante"){
+            const estudiante = await Estudiante.findOne({
+                usuario:usuario._id
+            });
+            if(!estudiante){
+                return res.status(404).json({
+                    msg:"Perfil estudiante no encontrado"
+                });
+            }
+            if(recurso.tema.unidad.materia.nivelAcademico !== estudiante.nivelAcademico){
+                 return res.status(403).json({
+                    msg:"Recurso no disponible para su nivel"
+                });
+            }
+            await registrarUsoRecurso(
+                estudiante._id,
+                recurso._id,
+                recurso.tipo
+            )
         }
         res.status(200).json(recurso);
     } catch (error) {

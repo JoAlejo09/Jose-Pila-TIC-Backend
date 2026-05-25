@@ -85,7 +85,7 @@ const obtenerResultadoPorId = async(req,res)=>{
                 msg:"No autorizado"
             });
         }
-
+        console.log(resultado)
         return res.json(resultado);
 
     } catch (error) {

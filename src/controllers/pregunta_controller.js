@@ -559,13 +559,16 @@ const actualizarPregunta = async(req,res)=>{
         const temaValidacion =
             await Tema.findById(
                 pregunta.tema
+            ).populate(
+                "unidad",
+                "nivelAcademico"
             );
 
 
 
         if(
             temaValidacion &&
-            temaValidacion.nivelAcademico
+            temaValidacion.unidad?.nivelAcademico
             !==
             pregunta.nivelAcademico
         ){

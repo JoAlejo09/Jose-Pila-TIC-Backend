@@ -5,6 +5,7 @@ import Estudiante from "../models/Estudiante.js";
 import Tema from "../models/Tema.js";
 import ResultadoDiagnostico from "../models/ResultadoDiagnostico.js";
 import mongoose from "mongoose";
+import { actualizarProgresoAcademico } from "./progresoacademico_controller.js";
 
 // CREAR CUESTIONARIO
 
@@ -394,12 +395,14 @@ const verificarDiagnosticoMateria = async (req, res) => {
 
 // RESOLVER CUESTIONARIO
 const resolverCuestionario = async (req, res) => {
-    try {
-        const { id } = req.params;
 
+    try {
+
+        const { id } = req.params;
         const { respuestas, tiempoEmpleado } = req.body;
 
         if (!respuestas || respuestas.length === 0) {
+
             return res.status(400).json({
                 msg: "Debe enviar respuestas"
             });
@@ -409,18 +412,21 @@ const resolverCuestionario = async (req, res) => {
             .populate("preguntas");
 
         if (!cuestionario) {
+
             return res.status(404).json({
                 msg: "Cuestionario no encontrado"
             });
         }
 
         if (!cuestionario.estado) {
+
             return res.status(400).json({
                 msg: "Cuestionario no disponible"
             });
         }
 
         if (cuestionario.preguntas.length === 0) {
+
             return res.status(400).json({
                 msg: "El cuestionario no tiene preguntas"
             });
@@ -431,35 +437,42 @@ const resolverCuestionario = async (req, res) => {
         });
 
         if (!estudiante) {
+
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
 
-        if ( cuestionario.nivelAcademico !== estudiante.nivelAcademico) {
+        if (cuestionario.nivelAcademico !== estudiante.nivelAcademico) {
+
             return res.status(403).json({
                 msg: "Nivel académico incorrecto"
             });
         }
 
-        if ( tiempoEmpleado > cuestionario.tiempoLimite * 60) {
+        if (tiempoEmpleado > cuestionario.tiempoLimite * 60) {
+
             return res.status(400).json({
                 msg: "Tiempo excedido"
             });
         }
 
-        const resultadoExistente = await Resultado.findOne({
-                estudiante: req.usuario.id,
-                cuestionario: id
-            });
+        // VALIDAR SI YA RINDIÓ
 
-        if ( resultadoExistente && !cuestionario.permitirReintento ) {
+        const resultadoExistente = await Resultado.findOne({
+            estudiante: estudiante._id,
+            cuestionario: id
+        });
+
+        if (resultadoExistente && !cuestionario.permitirReintento) {
+
             return res.status(400).json({
                 msg: "Ya resolviste este cuestionario"
             });
         }
 
-        const normalizar = (texto) => texto
+        const normalizar = (texto) =>
+            texto
                 ?.toString()
                 .trim()
                 .toLowerCase();
@@ -470,28 +483,64 @@ const resolverCuestionario = async (req, res) => {
 
         const detalleRespuestas = [];
 
+        const temasMap = {};
+
         for (const pregunta of cuestionario.preguntas) {
 
             const respuestaEncontrada = respuestas.find(
                 (r) => r.pregunta === pregunta._id.toString()
             );
 
-            const respuestaUsuario = respuestaEncontrada?.respuestaUsuario || "";
+            const respuestaUsuario =
+                respuestaEncontrada?.respuestaUsuario || "";
 
             let esCorrecta = false;
+
+            const temaId = pregunta.tema?.toString();
+
+            if (temaId && !temasMap[temaId]) {
+
+                temasMap[temaId] = {
+                    tema: pregunta.tema,
+                    correctas: 0,
+                    incorrectas: 0
+                };
+            }
 
             if (!respuestaUsuario) {
 
                 sinResponder++;
 
-            } else if ( normalizar(respuestaUsuario) === normalizar( pregunta.respuestaCorrecta)) {
+                if (temaId) {
+                    temasMap[temaId].incorrectas++;
+                }
+
+            } else if (
+
+                normalizar(respuestaUsuario) ===
+                normalizar(pregunta.respuestaCorrecta)
+
+            ) {
+
                 correctas++;
                 esCorrecta = true;
+
+                if (temaId) {
+                    temasMap[temaId].correctas++;
+                }
+
             } else {
+
                 incorrectas++;
+
+                if (temaId) {
+                    temasMap[temaId].incorrectas++;
+                }
             }
+
             detalleRespuestas.push({
                 pregunta: pregunta._id,
+                tema: pregunta.tema,
                 respuestaUsuario,
                 respuestaCorrecta: pregunta.respuestaCorrecta,
                 esCorrecta,
@@ -499,9 +548,30 @@ const resolverCuestionario = async (req, res) => {
             });
         }
 
+        const temasDebiles = [];
+        const temasFuertes = [];
+
+        Object.values(temasMap).forEach((tema) => {
+
+            if (tema.incorrectas > tema.correctas) {
+
+                temasDebiles.push({
+                    tema: tema.tema,
+                    incorrectas: tema.incorrectas
+                });
+
+            } else {
+
+                temasFuertes.push({
+                    tema: tema.tema,
+                    correctas: tema.correctas
+                });
+            }
+        });
+
         const porcentaje = Number(
             (
-                ( correctas / cuestionario.preguntas.length ) * 100
+                (correctas / cuestionario.preguntas.length) * 100
             ).toFixed(2)
         );
 
@@ -510,77 +580,134 @@ const resolverCuestionario = async (req, res) => {
         let nivelResultado = "";
 
         if (porcentaje < 50) {
+
             nivelResultado = "bajo";
-        }
-        else if (porcentaje < 80) {
+
+        } else if (porcentaje < 80) {
+
             nivelResultado = "medio";
-        }
-        else {
+
+        } else {
+
             nivelResultado = "alto";
         }
 
+        // CREAR RESULTADO
+
         const resultado = new Resultado({
-            estudiante: req.usuario.id,
+
+            estudiante: estudiante._id,
             cuestionario: id,
+            materia: cuestionario.materia,
+
             respuestas: detalleRespuestas,
+
             correctas,
             incorrectas,
             sinResponder,
-            puntaje: porcentaje,
+
+            puntaje: correctas,
             porcentaje,
+
             nivelResultado,
             aprobado,
-            tiempoEmpleado
+
+            tiempoEmpleado,
+
+            temasDebiles,
+            temasFuertes
         });
 
         await resultado.save();
 
+        // ACTUALIZAR PROGRESO
 
-        if ( cuestionario.tipoEvaluacion === "diagnostico" ) {
-            const diagnosticoExiste = await ResultadoDiagnostico.findOne({
-                    estudiante: req.usuario.id,
+        await actualizarProgresoAcademico({
+
+            estudianteId: estudiante._id,
+
+            porcentaje,
+            aprobado,
+            tiempoEmpleado,
+
+            temasFuertes,
+            temasDebiles
+        });
+
+        // RESULTADO DIAGNÓSTICO
+
+        if (cuestionario.tipoEvaluacion === "diagnostico") {
+
+            const diagnosticoExiste =
+                await ResultadoDiagnostico.findOne({
+
+                    estudiante: estudiante._id,
                     materia: cuestionario.materia
                 });
 
             if (!diagnosticoExiste) {
 
                 await ResultadoDiagnostico.create({
-                    estudiante: req.usuario.id,
+
+                    estudiante: estudiante._id,
+
                     materia: cuestionario.materia,
+
                     cuestionario: cuestionario._id,
+
                     puntaje: porcentaje,
+
                     nivelResultado,
                     aprobado
                 });
             }
         }
 
-        res.json({
+        return res.json({
+
             msg: "Cuestionario resuelto correctamente",
+
             resultado: {
+
+                _id: resultado._id,
+
                 correctas,
                 incorrectas,
                 sinResponder,
-                puntaje: porcentaje,
+
+                puntaje: correctas,
+
                 porcentaje,
+
                 nivelResultado,
                 aprobado,
-                tiempoEmpleado
+
+                tiempoEmpleado,
+
+                temasDebiles,
+                temasFuertes
             },
+
             revision: cuestionario.mostrarRevision
-                    ? detalleRespuestas.map((r) => ({
-                        ...r,
-                        respuestaCorrecta:
-                            cuestionario.mostrarRespuestasCorrectas
-                                ? r.respuestaCorrecta
-                                : undefined
-                    }))
-                    : []
+
+                ? detalleRespuestas.map((r) => ({
+
+                    ...r,
+
+                    respuestaCorrecta:
+                        cuestionario.mostrarRespuestasCorrectas
+                            ? r.respuestaCorrecta
+                            : undefined
+                }))
+
+                : []
         });
 
     } catch (error) {
+
         console.log(error);
-        res.status(500).json({
+
+        return res.status(500).json({
             msg: "Error al resolver cuestionario"
         });
     }

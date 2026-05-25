@@ -13,6 +13,8 @@ import cuestionarioRoutes from "./routes/cuestionario_routes.js";
 import preguntaRoutes from "./routes/pregunta_routes.js";
 import resultadoRoutes from "./routes/resultado_routes.js"
 
+import progresoRoutes from "./routes/progreso_routes.js";
+
 const app = express();
 
 //Middlewares
@@ -26,13 +28,16 @@ app.get("/", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/profile", perfilRoutes);
+app.use("/api/estudiante", estudianteRoutes);
+
 app.use("/api/materia", materiaRoutes);
+app.use("/api/unidad", unidadRoutes);
 app.use("/api/tema", temaRoutes);
 app.use("/api/recurso",recursoRoutes);
-app.use("/api/estudiante", estudianteRoutes);
+
 app.use("/api/cuestionario", cuestionarioRoutes);
 app.use("/api/pregunta", preguntaRoutes);
 app.use("/api/resultado",resultadoRoutes);
-app.use("/api/unidad", unidadRoutes);
+app.use("/api/progreso", progresoRoutes);
 
 export default app;

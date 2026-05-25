@@ -52,9 +52,6 @@ const verificarRol = (...rolesPermitidos)=>{
             });
         }
 
-        console.log("ROL:", req.usuario.rol);
-        console.log("PERMITIDOS:", rolesPermitidos);
-
         if(!rolesPermitidos.includes(req.usuario.rol)){
             return res.status(403).json({
                 msg:"No tiene permisos para realizar esta acción"
