@@ -1,0 +1,87 @@
+import mongoose from "mongoose";
+
+const tutoriaSchema = new mongoose.Schema(
+{
+    estudiante:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref:"Usuario",
+        required:true
+    },
+
+    tutor:{
+        type: mongoose.Schema.Types.ObjectId,
+        ref:"Usuario",
+        default:null
+    },
+
+    materia:{
+        type:String,
+        required:true,
+        trim:true
+    },
+
+    tema:{
+        type:String,
+        required:true,
+        trim:true
+    },
+
+    descripcion:{
+        type:String,
+        default:""
+    },
+
+    modalidad:{
+        type:String,
+        enum:[
+            "videollamada",
+            "ejercicios",
+            "presencial"
+        ],
+        required:true
+    },
+    direccion:{
+        type:String,
+        default:""
+    },
+    fecha:{
+        type:Date,
+        required:true
+    },
+    duracion:{
+        type:Number,
+        required:true
+    },
+    estado:{
+        type:String,
+        enum:[
+            "pendiente",
+            "aceptada",
+            "realizada",
+            "cancelada"
+        ],
+        default:"pendiente"
+    },
+    observacionTutor:{
+        type:String,
+        default:""
+    },
+    calificacion:{
+        type:Number,
+        min:1,
+        max:5,
+        default:null
+    },
+    comentarioCalificacion:{
+        type:String,
+        default:""
+    }
+},
+{
+    timestamps:true
+});
+
+export default mongoose.model(
+    "Tutoria",
+    tutoriaSchema
+);
