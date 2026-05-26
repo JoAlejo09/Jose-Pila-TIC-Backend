@@ -311,18 +311,32 @@ const eliminarResultadoAdmin = async(req,res)=>{
 
 const obtenerUltimosResultados = async(req,res)=>{
     try {
+
+        const estudiante = await Estudiante.findOne({
+            usuario:req.usuario.id
+        });
+
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil estudiante no encontrado"
+            });
+        }
+
         const resultados = await Resultado.find({
-            estudiante:req.usuario.id
+            estudiante:estudiante._id
         })
         .populate("materia","nombre")
         .populate("cuestionario", "titulo tipoEvaluacion")
         .sort({createdAt:-1})
         .limit(2);
 
-        res.json(resultados)
+        return res.json(resultados);
+
     } catch (error) {
+
         console.log(error);
-        res.status(500).json({
+
+        return res.status(500).json({
             msg:"Error al obtener ultimos resultados"
         });
     }

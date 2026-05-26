@@ -1,68 +1,113 @@
 import AnalisisAcademico from "../models/Recomendaciones/analisisAcademico.js";
 import Recomendacion from "../models/Recomendaciones/Recomendacion.js";
 import Recurso from "../models/Recurso.js";
+import Estudiante from "../models/Estudiante.js";
 
-const generarRecomendacionEstudiante = async(estudianteId)=>{
+const generarRecomendacionEstudiante = async (
+    estudianteId
+) => {
+
     try {
-        const analisis = await AnalisisAcademico-findOne({
-            estudiante: estudianteId
-        });
-        if(!analisis){
+
+        const analisis =
+            await AnalisisAcademico.findOne({
+                estudiante: estudianteId
+            });
+
+        if (!analisis) {
             return;
         }
-        //Para mantener las recomendaciones actualizadas
-        //es necesario quitar lo anterior y hacer nuevas
+
         await Recomendacion.deleteMany({
-            estudiante:estudianteId
+            estudiante: estudianteId
         });
-        //Para evaluar que temas son los que mas falla el estudiante
-        for(const temaAnalisis of analisis.temas){
-            if(temaAnalisis.nivelDominio === "bajo"){
+
+        for (const temaAnalisis of analisis.temas) {
+
+            if (
+                temaAnalisis.nivelDominio === "bajo"
+            ) {
+
                 const recursos = await Recurso.find({
+
                     tema: temaAnalisis.tema,
-                    estado:true
-                })
-                .sort({dificultad:1})
+
+                    estado: true
+                });
+
+                if (recursos.length === 0) {
+                    continue;
+                }
 
                 await Recomendacion.create({
+
                     estudiante: estudianteId,
+
                     tema: temaAnalisis.tema,
-                    recursos:recursos.map(
-                        (recurso)=>recurso._id
-                    ),nivelPrioridad:"alta",
-                    motivo: "Bajo rendimiento detectado en este tema"
+
+                    recursos: recursos.map(
+                        (r) => r._id
+                    ),
+
+                    nivelPrioridad: "alta",
+
+                    motivo:
+                        "Bajo rendimiento detectado en este tema",
+
+                    estado: true
                 });
             }
         }
-    } catch (error) {
-        console.log(error);        
-    }
-}
 
-const obtenerMisRecomendaciones = async(req,res)=>{
-    try {
-        const recomendaciones = await Recomendacion.find({
-            estudiante: req.usuario.id,
-            estado:true
-        })
-        .populate("tema","nombre")
-        .populate({
-            path:"recursos",
-            select:"titulo tipo dificultad"
-        })
-        return res.json(recomendaciones)
     } catch (error) {
-        console.log(error)
-        return res.status(500).json({
-            msg:"Error al obtener recomendaciones"
-        })
+
+        console.log(error);
     }
-}
+};
+
+const obtenerMisRecomendaciones = async (req, res) => {
+
+    try {
+
+        const estudiante = await Estudiante.findOne({
+            usuario: req.usuario.id
+        });
+
+        if (!estudiante) {
+
+            return res.status(404).json({
+                msg: "Perfil estudiante no encontrado"
+            });
+        }
+
+        const recomendaciones = await Recomendacion.find({
+
+            estudiante: estudiante._id,
+
+            estado: true
+
+        })
+        .populate("tema", "nombre")
+        .populate({
+            path: "recursos",
+            select: "titulo tipo dificultad"
+        })
+        .sort({ createdAt: -1 });
+
+        return res.json(recomendaciones);
+
+    } catch (error) {
+
+        console.log(error);
+
+        return res.status(500).json({
+            msg: "Error al obtener recomendaciones"
+        });
+    }
+};
 
 const actualizarAnalisisAcademico = async ({
     estudianteId,
-    cuestionarioId,
-    materiaId,
     temas
 }) => {
 
@@ -73,25 +118,17 @@ const actualizarAnalisisAcademico = async ({
                 estudiante: estudianteId
             });
 
-        // CREAR ANALÍTICA SI NO EXISTE
-
         if (!analitica) {
 
             analitica = new AnalisisAcademico({
-
                 estudiante: estudianteId,
-
-                estadisticasTemas: []
+                temas: []
             });
         }
-
-        // VALIDAR TEMAS
 
         if (!Array.isArray(temas) || temas.length === 0) {
             return;
         }
-
-        // RECORRER TEMAS DEL CUESTIONARIO
 
         for (const temaActual of temas) {
 
@@ -100,7 +137,7 @@ const actualizarAnalisisAcademico = async ({
             }
 
             const indiceTema =
-                analitica.estadisticasTemas.findIndex(
+                analitica.temas.findIndex(
 
                     (item) =>
                         item.tema.toString()
@@ -108,101 +145,103 @@ const actualizarAnalisisAcademico = async ({
                         temaActual.tema.toString()
                 );
 
-            const totalPreguntas =
-                (temaActual.correctas || 0)
-                +
-                (temaActual.incorrectas || 0);
+            const correctas =
+                temaActual.correctas || 0;
 
-            // EVITAR DIVISIÓN ENTRE 0
+            const incorrectas =
+                temaActual.incorrectas || 0;
 
-            const porcentajeTema =
-                totalPreguntas > 0
+            const total =
+                correctas + incorrectas;
+
+            const porcentaje =
+                total > 0
                     ? Number(
                         (
-                            ((temaActual.correctas || 0) / totalPreguntas)
+                            (correctas / total)
                             * 100
                         ).toFixed(2)
                     )
                     : 0;
 
-            // SI EL TEMA YA EXISTE
+            let nivelDominio = "bajo";
+
+            if (porcentaje >= 80) {
+
+                nivelDominio = "alto";
+
+            } else if (porcentaje >= 60) {
+
+                nivelDominio = "medio";
+            }
+
+            // SI YA EXISTE
 
             if (indiceTema !== -1) {
 
-                analitica.estadisticasTemas[indiceTema]
-                    .correctas += (temaActual.correctas || 0);
+                analitica.temas[indiceTema]
+                    .respuestasCorrectas += correctas;
 
-                analitica.estadisticasTemas[indiceTema]
-                    .incorrectas += (temaActual.incorrectas || 0);
+                analitica.temas[indiceTema]
+                    .respuestasIncorrectas += incorrectas;
 
-                analitica.estadisticasTemas[indiceTema]
-                    .vecesEvaluado += 1;
-
-                // AGREGAR CUESTIONARIO SI NO EXISTE
-
-                const cuestionarioExiste =
-                    analitica.estadisticasTemas[indiceTema]
-                        .cuestionarios.some(
-                            (id) =>
-                                id.toString()
-                                ===
-                                cuestionarioId.toString()
-                        );
-
-                if (!cuestionarioExiste) {
-
-                    analitica.estadisticasTemas[indiceTema]
-                        .cuestionarios.push(cuestionarioId);
-                }
+                analitica.temas[indiceTema]
+                    .preguntasTotales += total;
 
                 const correctasTotales =
-                    analitica.estadisticasTemas[indiceTema]
-                        .correctas;
+                    analitica.temas[indiceTema]
+                        .respuestasCorrectas;
 
-                const incorrectasTotales =
-                    analitica.estadisticasTemas[indiceTema]
-                        .incorrectas;
+                const preguntasTotales =
+                    analitica.temas[indiceTema]
+                        .preguntasTotales;
 
-                const total =
-                    correctasTotales
-                    +
-                    incorrectasTotales;
-
-                analitica.estadisticasTemas[indiceTema]
-                    .porcentajeDominio =
-                    total > 0
+                const nuevoPorcentaje =
+                    preguntasTotales > 0
                         ? Number(
                             (
-                                (correctasTotales / total)
+                                (correctasTotales /
+                                    preguntasTotales)
                                 * 100
                             ).toFixed(2)
                         )
                         : 0;
 
-                analitica.estadisticasTemas[indiceTema]
-                    .ultimaActualizacion = new Date();
+                analitica.temas[indiceTema]
+                    .porcentajeDominio =
+                    nuevoPorcentaje;
+
+                if (nuevoPorcentaje >= 80) {
+
+                    analitica.temas[indiceTema]
+                        .nivelDominio = "alto";
+
+                } else if (nuevoPorcentaje >= 60) {
+
+                    analitica.temas[indiceTema]
+                        .nivelDominio = "medio";
+
+                } else {
+
+                    analitica.temas[indiceTema]
+                        .nivelDominio = "bajo";
+                }
 
             } else {
 
-                // CREAR NUEVO TEMA
-
-                analitica.estadisticasTemas.push({
+                analitica.temas.push({
 
                     tema: temaActual.tema,
 
-                    materia: materiaId,
+                    respuestasCorrectas: correctas,
 
-                    cuestionarios: [cuestionarioId],
+                    respuestasIncorrectas: incorrectas,
 
-                    correctas: temaActual.correctas || 0,
+                    preguntasTotales: total,
 
-                    incorrectas: temaActual.incorrectas || 0,
+                    porcentajeDominio: porcentaje,
 
-                    vecesEvaluado: 1,
-
-                    porcentajeDominio: porcentajeTema,
-
-                    ultimaActualizacion: new Date()
+                    nivelDominio
                 });
             }
         }
@@ -215,4 +254,8 @@ const actualizarAnalisisAcademico = async ({
     }
 };
 
-export {generarRecomendacionEstudiante, obtenerMisRecomendaciones,actualizarAnalisisAcademico};
+export {
+    generarRecomendacionEstudiante,
+    obtenerMisRecomendaciones,
+    actualizarAnalisisAcademico
+};

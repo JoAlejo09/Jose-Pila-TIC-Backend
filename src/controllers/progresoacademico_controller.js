@@ -1,18 +1,31 @@
 import ProgresoAcademico from "../models/ProgresoAcademico.js";
+import Estudiante from "../models/Estudiante.js";
 
-const obtenerMiProgreso = async(req,res)=>{
+const obtenerMiProgreso = async (req, res) => {
+
     try {
 
-        const progreso = await ProgresoAcademico.findOne({
-            estudiante:req.usuario.id
-        })
-        .populate("temasFuertes.tema","nombre")
-        .populate("temasDebiles.tema","nombre");
+        const estudiante = await Estudiante.findOne({
+            usuario: req.usuario.id
+        });
 
-        if(!progreso){
+        if (!estudiante) {
 
             return res.status(404).json({
-                msg:"Progreso académico no encontrado"
+                msg: "Perfil estudiante no encontrado"
+            });
+        }
+
+        const progreso = await ProgresoAcademico.findOne({
+            estudiante: estudiante._id
+        })
+        .populate("temasFuertes.tema", "nombre")
+        .populate("temasDebiles.tema", "nombre");
+
+        if (!progreso) {
+
+            return res.status(404).json({
+                msg: "Progreso académico no encontrado"
             });
         }
 
@@ -23,11 +36,12 @@ const obtenerMiProgreso = async(req,res)=>{
         console.log(error);
 
         return res.status(500).json({
-            msg:"Error al obtener progreso académico"
+            msg: "Error al obtener progreso académico"
         });
     }
 };
-const actualizarProgresoAcademico = async({
+
+const actualizarProgresoAcademico = async ({
     estudianteId,
     tipoEvaluacion,
     porcentaje,
@@ -36,31 +50,32 @@ const actualizarProgresoAcademico = async({
     temasFuertes,
     temasDebiles
 
-})=>{
+}) => {
 
     try {
 
         let progreso = await ProgresoAcademico.findOne({
-            estudiante:estudianteId
+            estudiante: estudianteId
         });
 
         // CREAR SI NO EXISTE
 
-        if(!progreso){
+        if (!progreso) {
 
-            progreso = new ProgresoAcademico({
-                estudiante:estudianteId
+            progreso = await ProgresoAcademico.create({
+                estudiante: estudianteId
             });
         }
 
         // SOLO EVALUACIONES DE REFUERZO
         // AFECTAN EL PROGRESO GENERAL
 
-        if(tipoEvaluacion === "refuerzo"){
+        if (tipoEvaluacion === "refuerzo") {
 
             progreso.evaluacionesRendidas += 1;
 
-            if(aprobado){
+            if (aprobado) {
+
                 progreso.evaluacionesAprobadas += 1;
             }
 
@@ -83,12 +98,11 @@ const actualizarProgresoAcademico = async({
             progreso.tiempoTotalEstudio += tiempoEmpleado;
         }
 
-        // DIAGNÓSTICO Y REFUERZO
-        // ACTUALIZAN ANÁLISIS ACADÉMICO
+        // ACTUALIZAR TEMAS
 
-        progreso.temasFuertes = temasFuertes;
+        progreso.temasFuertes = temasFuertes || [];
 
-        progreso.temasDebiles = temasDebiles;
+        progreso.temasDebiles = temasDebiles || [];
 
         progreso.ultimaActividad = new Date();
 
@@ -99,35 +113,73 @@ const actualizarProgresoAcademico = async({
         console.log(error);
     }
 };
-const registrarUsoRecurso = async( estudianteId, recursoId, tipo)=>{
+
+const registrarUsoRecurso = async (
+    estudianteId,
+    recursoId,
+    tipo
+) => {
+
     try {
-        const progreso = await ProgresoAcademico.findOne({
-            estudiante:estudianteId
+
+        let progreso = await ProgresoAcademico.findOne({
+            estudiante: estudianteId
         });
 
-        if(!progreso){
-            return;
+        // CREAR SI NO EXISTE
+
+        if (!progreso) {
+
+            progreso = await ProgresoAcademico.create({
+                estudiante: estudianteId
+            });
         }
+
+        // VALIDAR SI YA VISITÓ EL RECURSO
 
         const yaExiste = progreso.recursosVisitados.some(
-            (recurso)=> recurso.toString() === recursoId.toString()
+
+            (recurso) =>
+                recurso.toString()
+                ===
+                recursoId.toString()
         );
 
-        if(yaExiste){
+        if (yaExiste) {
             return;
         }
+
         progreso.recursosVisitados.push(recursoId);
 
-        if(tipo === "video"){ progreso.recursosVistos.videos += 1; }
-        if(tipo === "pdf"){ progreso.recursosVistos.pdfs += 1; }
-        if(tipo === "teoria"){ progreso.recursosVistos.teoria += 1; }
+        // CONTADOR POR TIPO
+
+        if (tipo === "video") {
+
+            progreso.recursosVistos.videos += 1;
+        }
+
+        if (tipo === "pdf") {
+
+            progreso.recursosVistos.pdfs += 1;
+        }
+
+        if (tipo === "teoria") {
+
+            progreso.recursosVistos.teoria += 1;
+        }
+
+        progreso.ultimaActividad = new Date();
 
         await progreso.save();
-
 
     } catch (error) {
 
         console.log(error);
     }
 };
-export {obtenerMiProgreso, actualizarProgresoAcademico, registrarUsoRecurso};
+
+export {
+    obtenerMiProgreso,
+    actualizarProgresoAcademico,
+    registrarUsoRecurso
+};

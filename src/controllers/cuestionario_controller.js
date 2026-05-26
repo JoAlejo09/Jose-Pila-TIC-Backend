@@ -400,11 +400,15 @@ const verificarDiagnosticoMateria = async (req, res) => {
 //Recibe el cuestionario resuelto por parte del estudiante para almacenarlo,
 // registrarlo en progreso, realizar analisis y generar recomendaciones.
 const resolverCuestionario = async (req, res) => {
+
     try {
+
         const { id } = req.params;
+
         const { respuestas, tiempoEmpleado } = req.body;
 
         if (!respuestas || respuestas.length === 0) {
+
             return res.status(400).json({
                 msg: "Debe enviar respuestas"
             });
@@ -414,18 +418,21 @@ const resolverCuestionario = async (req, res) => {
             .populate("preguntas");
 
         if (!cuestionario) {
+
             return res.status(404).json({
                 msg: "Cuestionario no encontrado"
             });
         }
 
         if (!cuestionario.estado) {
+
             return res.status(400).json({
                 msg: "Cuestionario no disponible"
             });
         }
 
         if (cuestionario.preguntas.length === 0) {
+
             return res.status(400).json({
                 msg: "El cuestionario no tiene preguntas"
             });
@@ -436,249 +443,426 @@ const resolverCuestionario = async (req, res) => {
         });
 
         if (!estudiante) {
+
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
 
-        if ( cuestionario.nivelAcademico !==
-            estudiante.nivelAcademico ) {
+        if (
+            cuestionario.nivelAcademico
+            !==
+            estudiante.nivelAcademico
+        ) {
 
             return res.status(403).json({
                 msg: "Nivel académico incorrecto"
             });
         }
 
-        //Valida que el tiempo cumpla con el requisito de la evaluacion
-        if ( tiempoEmpleado > cuestionario.tiempoLimite * 60) {
+        // VALIDAR TIEMPO
+
+        if (
+            tiempoEmpleado >
+            cuestionario.tiempoLimite * 60
+        ) {
+
             return res.status(400).json({
                 msg: "Tiempo excedido"
             });
         }
-        //Valida si se puede reintentar rendir el examen
+
+        // VALIDAR REINTENTO
+
         const resultadoExistente = await Resultado.findOne({
+
             estudiante: estudiante._id,
+
             cuestionario: id
         });
 
-        if ( resultadoExistente && !cuestionario.permitirReintento) {
+        if (
+            resultadoExistente &&
+            !cuestionario.permitirReintento
+        ) {
+
             return res.status(400).json({
                 msg: "Ya resolviste este cuestionario"
             });
         }
 
-        //Para normalizar las respuestas
-        //tanto seleccionadas como correctas
-        //en especial cuando son respuestas ingresadas
-        const normalizar = (texto) =>
-            texto ?.toString().trim() .toLowerCase();
+        // NORMALIZAR RESPUESTAS
 
-        // Variables para calcular el resultado
+        const normalizar = (texto) =>
+            texto?.toString().trim().toLowerCase();
+
+        // VARIABLES RESULTADO
 
         let correctas = 0;
+
         let incorrectas = 0;
+
         let sinResponder = 0;
 
         const detalleRespuestas = [];
 
         const temasMap = {};
 
-        //Recorre cada pregunta del cuestionario
+        // RECORRER PREGUNTAS
+
         for (const pregunta of cuestionario.preguntas) {
 
             const respuestaEncontrada = respuestas.find(
+
                 (r) =>
                     r.pregunta ===
                     pregunta._id.toString()
             );
 
-            const respuestaUsuario = respuestaEncontrada?.respuestaUsuario || "";
+            const respuestaUsuario =
+                respuestaEncontrada?.respuestaUsuario || "";
 
             let esCorrecta = false;
 
             const temaId = pregunta.tema?.toString();
 
-            //Para analisis academico se evalua si acerto la pregunta o no por tema 
+            // CREAR TEMA EN MAPA
+
             if (temaId && !temasMap[temaId]) {
+
                 temasMap[temaId] = {
+
                     tema: pregunta.tema,
+
                     correctas: 0,
+
                     incorrectas: 0
                 };
             }
 
+            // SIN RESPONDER
+
             if (!respuestaUsuario) {
+
                 sinResponder++;
+
                 if (temaId) {
+
                     temasMap[temaId].incorrectas++;
                 }
             }
 
-            else if ( normalizar(respuestaUsuario) ===
+            // RESPUESTA CORRECTA
+
+            else if (
+
+                normalizar(respuestaUsuario)
+                ===
                 normalizar(pregunta.respuestaCorrecta)
+
             ) {
+
                 correctas++;
+
                 esCorrecta = true;
+
                 if (temaId) {
+
                     temasMap[temaId].correctas++;
                 }
-            }else {
+
+            }
+
+            // RESPUESTA INCORRECTA
+
+            else {
+
                 incorrectas++;
+
                 if (temaId) {
+
                     temasMap[temaId].incorrectas++;
                 }
             }
 
-            //Para mostrar el resultado se necesita guardar el detalle 
+            // DETALLE RESPUESTA
+
             detalleRespuestas.push({
+
                 pregunta: pregunta._id,
+
                 tema: pregunta.tema,
+
                 respuestaUsuario,
-                respuestaCorrecta: pregunta.respuestaCorrecta,
+
+                respuestaCorrecta:
+                    pregunta.respuestaCorrecta,
+
                 esCorrecta,
-                explicacion: pregunta.explicacion || ""
+
+                explicacion:
+                    pregunta.explicacion || ""
             });
         }
 
-        //Para analisis se realiza la implementacion de respuestas
-        //Fuertes -> mas aciertos
-        //Debiles -> menos aciertos !! Para recomendacion 
+        // ANALÍTICA POR TEMAS
+
         const temasFuertes = [];
+
         const temasDebiles = [];
 
         Object.values(temasMap).forEach((tema) => {
-            //Se valida segun aciertos y errores
-            //Si hay mas aciertos que errores tema es Fuerte 
-            //si no tema es Debil y requiere recomendar
-            if ( tema.incorrectas >= tema.correctas ) {
+
+            if (
+                tema.incorrectas >= tema.correctas
+            ) {
+
                 temasDebiles.push({
+
                     tema: tema.tema,
+
                     incorrectas: tema.incorrectas
                 });
 
             } else {
+
                 temasFuertes.push({
+
                     tema: tema.tema,
+
                     correctas: tema.correctas
                 });
             }
         });
-        //Porcentaje de preguntas acertadas
+
+        // PORCENTAJE
+
         const porcentaje = Number(
+
             (
-                ( correctas / cuestionario.preguntas.length) * 100
-            ).toFixed(1)//Con 1 decimales
+                (
+                    correctas /
+                    cuestionario.preguntas.length
+                ) * 100
+            ).toFixed(1)
         );
-        //Determina si aprobo o no
+
+        // APROBADO
+
         const aprobado = porcentaje >= 70;
 
-        //Validacion segun el % de preguntas acertadas
+        // NIVEL RESULTADO
+
         let nivelResultado = "";
+
         if (porcentaje < 50) {
+
             nivelResultado = "bajo";
-        }
-        else if (porcentaje < 80) {
+
+        } else if (porcentaje < 80) {
+
             nivelResultado = "medio";
-        }
-        else {
+
+        } else {
+
             nivelResultado = "alto";
         }
 
-        //Registra el resultado
+        // GUARDAR RESULTADO
+
         const resultado = new Resultado({
+
             estudiante: estudiante._id,
+
             cuestionario: id,
+
             materia: cuestionario.materia,
+
             respuestas: detalleRespuestas,
+
             correctas,
+
             incorrectas,
+
             sinResponder,
+
             puntaje: correctas,
+
             porcentaje,
+
             nivelResultado,
+
             aprobado,
+
             tiempoEmpleado,
+
             temasDebiles,
+
             temasFuertes
         });
 
         await resultado.save();
 
-        // Actualiza Progreso academico una vez rendida la evaluacion
+        // ACTUALIZAR PROGRESO
 
         await actualizarProgresoAcademico({
+
             estudianteId: estudiante._id,
-            tipoEvaluacion: cuestionario.tipoEvaluacion,
+
+            tipoEvaluacion:
+                cuestionario.tipoEvaluacion,
+
             porcentaje,
+
             aprobado,
+
             tiempoEmpleado,
+
             temasFuertes,
+
             temasDebiles
-        });
-        //Actualiza Analisis para recomendacion
-        await actualizarAnalisisAcademico ({
-            estudianteId: estudiante._id,
-            materiaId: cuestionario.materia,
-            temasFuertes,
-            temasDebiles
-        });
-        //Genera recomendaciones
-        await generarRecomendacionEstudiante({
-            estudianteId: estudiante._id
         });
 
+        // PREPARAR TEMAS PARA ANALÍTICA
+
+        const temasAnalisis = [
+
+            ...temasFuertes.map((tema) => ({
+
+                tema: tema.tema,
+
+                correctas:
+                    tema.correctas || 0,
+
+                incorrectas: 0
+            })),
+
+            ...temasDebiles.map((tema) => ({
+
+                tema: tema.tema,
+
+                correctas: 0,
+
+                incorrectas:
+                    tema.incorrectas || 0
+            }))
+        ];
+
+        // ACTUALIZAR ANALÍTICA
+
+        await actualizarAnalisisAcademico({
+
+            estudianteId: estudiante._id,
+
+            cuestionarioId: cuestionario._id,
+
+            materiaId: cuestionario.materia,
+
+            temas: temasAnalisis
+        });
+
+        // GENERAR RECOMENDACIONES
+
+        await generarRecomendacionEstudiante(
+            estudiante._id
+        );
+
         // RESULTADO DIAGNÓSTICO
-        if ( cuestionario.tipoEvaluacion === "diagnostico"
+
+        if (
+            cuestionario.tipoEvaluacion
+            ===
+            "diagnostico"
         ) {
-            const diagnosticoExiste = await ResultadoDiagnostico.findOne({
+
+            const diagnosticoExiste =
+                await ResultadoDiagnostico.findOne({
+
                     estudiante: estudiante._id,
+
                     materia: cuestionario.materia
                 });
+
             if (!diagnosticoExiste) {
+
                 await ResultadoDiagnostico.create({
+
                     estudiante: estudiante._id,
+
                     materia: cuestionario.materia,
+
                     cuestionario: cuestionario._id,
+
                     puntaje: porcentaje,
+
                     nivelResultado,
+
                     aprobado
                 });
             }
         }
-        console.log(resultado);
+
         return res.json({
-            msg: "Cuestionario resuelto correctamente",
+
+            msg:
+                "Cuestionario resuelto correctamente",
+
             resultado: {
+
                 _id: resultado._id,
+
                 correctas,
+
                 incorrectas,
+
                 sinResponder,
+
                 puntaje: correctas,
+
                 porcentaje,
+
                 nivelResultado,
+
                 aprobado,
+
                 tiempoEmpleado,
+
                 temasDebiles,
+
                 temasFuertes
             },
+
             revision:
+
                 cuestionario.mostrarRevision
+
                     ? detalleRespuestas.map((r) => ({
+
                         ...r,
+
                         respuestaCorrecta:
-                            cuestionario.mostrarRespuestasCorrectas
+
+                            cuestionario
+                                .mostrarRespuestasCorrectas
+
                                 ? r.respuestaCorrecta
+
                                 : undefined
                     }))
+
                     : []
         });
+
     } catch (error) {
+
         console.log(error);
+
         return res.status(500).json({
             msg: "Error al resolver cuestionario"
         });
     }
 };
+
 const actualizarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;

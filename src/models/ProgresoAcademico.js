@@ -4,7 +4,7 @@ const progresoAcademicoSchema = new Schema({
 
     estudiante:{
         type:Schema.Types.ObjectId,
-        ref:"Usuario",
+        ref:"Estudiante",
         required:true,
         unique:true
     },
