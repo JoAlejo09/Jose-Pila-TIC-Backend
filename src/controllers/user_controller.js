@@ -1,4 +1,6 @@
 import Usuario from "../models/Usuario.js";
+import Estudiante from "../models/Estudiante.js";
+
 import { enviarEmailConfirmacion, enviarEmailRecuperacion, enviarEmailReactivacion } from "../config/nodemailer.js";
 
 import generarJWT from "../config/JWT.js";
@@ -296,25 +298,33 @@ const cambiarPasswordObligatorio = async (req, res) => {
 };
 //Obtener usuarios con busqueda personalizada
 const obtenerUsuarios = async (req, res) => {
+
     try {
+
         const { search } = req.query;
+
         let filtro = {};
+
         if (search) {
 
             filtro = {
+
                 $or: [
+
                     {
                         nombre: {
                             $regex: search,
                             $options: "i"
                         }
                     },
+
                     {
                         apellido: {
                             $regex: search,
                             $options: "i"
                         }
                     },
+
                     {
                         email: {
                             $regex: search,
@@ -324,13 +334,52 @@ const obtenerUsuarios = async (req, res) => {
                 ]
             };
         }
+
         const usuarios = await Usuario.find(filtro)
-                        .select("-password -token");
-        res.status(200).json(usuarios);
+            .select("-password -token");
+
+        // OBTENER DATOS ESTUDIANTE
+
+        const usuariosConNivel = await Promise.all(
+
+            usuarios.map(async (usuario) => {
+
+                let nivelAcademico = null;
+
+                if (usuario.rol === "estudiante") {
+
+                    const estudiante =
+                        await Estudiante.findOne({
+
+                            usuario: usuario._id
+
+                        }).select("nivelAcademico");
+
+                    nivelAcademico =
+                        estudiante?.nivelAcademico || null;
+                }
+
+                return {
+
+                    ...usuario.toObject(),
+
+                    nivelAcademico
+                };
+            })
+        );
+
+        return res.status(200).json(
+            usuariosConNivel
+        );
+
     } catch (error) {
+
         console.log(error);
-        res.status(500).json({
+
+        return res.status(500).json({
+
             msg: "Error al obtener usuarios"
+
         });
     }
 };

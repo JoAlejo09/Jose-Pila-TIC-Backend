@@ -58,25 +58,24 @@ const obtenerMisRecomendaciones = async(req,res)=>{
         })
     }
 }
-const actualizarAnalisisAcademico = async({
+
+const actualizarAnalisisAcademico = async ({
     estudianteId,
     cuestionarioId,
     materiaId,
     temas
-
-})=>{
+}) => {
 
     try {
 
         let analitica =
             await AnalisisAcademico.findOne({
-
                 estudiante: estudianteId
             });
 
         // CREAR ANALÍTICA SI NO EXISTE
 
-        if(!analitica){
+        if (!analitica) {
 
             analitica = new AnalisisAcademico({
 
@@ -86,52 +85,83 @@ const actualizarAnalisisAcademico = async({
             });
         }
 
+        // VALIDAR TEMAS
+
+        if (!Array.isArray(temas) || temas.length === 0) {
+            return;
+        }
+
         // RECORRER TEMAS DEL CUESTIONARIO
 
-        for(const temaActual of temas){
+        for (const temaActual of temas) {
+
+            if (!temaActual.tema) {
+                continue;
+            }
 
             const indiceTema =
                 analitica.estadisticasTemas.findIndex(
 
-                    (item)=>
+                    (item) =>
                         item.tema.toString()
                         ===
                         temaActual.tema.toString()
                 );
 
             const totalPreguntas =
-                temaActual.correctas
+                (temaActual.correctas || 0)
                 +
-                temaActual.incorrectas;
+                (temaActual.incorrectas || 0);
 
-            const porcentajeTema = Number(
+            // EVITAR DIVISIÓN ENTRE 0
 
-                (
-                    (temaActual.correctas / totalPreguntas)
-                    * 100
-                ).toFixed(2)
-            );
+            const porcentajeTema =
+                totalPreguntas > 0
+                    ? Number(
+                        (
+                            ((temaActual.correctas || 0) / totalPreguntas)
+                            * 100
+                        ).toFixed(2)
+                    )
+                    : 0;
 
             // SI EL TEMA YA EXISTE
 
-            if(indiceTema !== -1){
+            if (indiceTema !== -1) {
 
                 analitica.estadisticasTemas[indiceTema]
-                    .correctas += temaActual.correctas;
+                    .correctas += (temaActual.correctas || 0);
 
                 analitica.estadisticasTemas[indiceTema]
-                    .incorrectas += temaActual.incorrectas;
+                    .incorrectas += (temaActual.incorrectas || 0);
 
                 analitica.estadisticasTemas[indiceTema]
                     .vecesEvaluado += 1;
 
+                // AGREGAR CUESTIONARIO SI NO EXISTE
+
+                const cuestionarioExiste =
+                    analitica.estadisticasTemas[indiceTema]
+                        .cuestionarios.some(
+                            (id) =>
+                                id.toString()
+                                ===
+                                cuestionarioId.toString()
+                        );
+
+                if (!cuestionarioExiste) {
+
+                    analitica.estadisticasTemas[indiceTema]
+                        .cuestionarios.push(cuestionarioId);
+                }
+
                 const correctasTotales =
                     analitica.estadisticasTemas[indiceTema]
-                    .correctas;
+                        .correctas;
 
                 const incorrectasTotales =
                     analitica.estadisticasTemas[indiceTema]
-                    .incorrectas;
+                        .incorrectas;
 
                 const total =
                     correctasTotales
@@ -139,18 +169,20 @@ const actualizarAnalisisAcademico = async({
                     incorrectasTotales;
 
                 analitica.estadisticasTemas[indiceTema]
-                    .porcentajeDominio = Number(
-
-                        (
-                            (correctasTotales / total)
-                            * 100
-                        ).toFixed(2)
-                    );
+                    .porcentajeDominio =
+                    total > 0
+                        ? Number(
+                            (
+                                (correctasTotales / total)
+                                * 100
+                            ).toFixed(2)
+                        )
+                        : 0;
 
                 analitica.estadisticasTemas[indiceTema]
                     .ultimaActualizacion = new Date();
 
-            }else{
+            } else {
 
                 // CREAR NUEVO TEMA
 
@@ -162,9 +194,9 @@ const actualizarAnalisisAcademico = async({
 
                     cuestionarios: [cuestionarioId],
 
-                    correctas: temaActual.correctas,
+                    correctas: temaActual.correctas || 0,
 
-                    incorrectas: temaActual.incorrectas,
+                    incorrectas: temaActual.incorrectas || 0,
 
                     vecesEvaluado: 1,
 
@@ -182,4 +214,5 @@ const actualizarAnalisisAcademico = async({
         console.log(error);
     }
 };
+
 export {generarRecomendacionEstudiante, obtenerMisRecomendaciones,actualizarAnalisisAcademico};

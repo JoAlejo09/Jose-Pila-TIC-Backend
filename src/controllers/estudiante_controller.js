@@ -176,19 +176,29 @@ const actualizarPerfilEstudiante = async (req, res) => {
 };
 // OBTENER MATERIAS DEL ESTUDIANTE
 const obtenerMateriasEstudiante = async (req, res) => {
+
     try {
-        const usuario = await Usuario.findById(req.usuario.id);
+
+        const usuario = await Usuario.findById(
+            req.usuario.id
+        );
+
         if (!usuario) {
+
             return res.status(404).json({
                 msg: "Usuario no encontrado"
             });
         }
+
         if (usuario.rol !== "estudiante") {
+
             return res.status(403).json({
                 msg: "Acceso solo para estudiantes"
             });
         }
+
         if (!usuario.perfilCompleto) {
+
             return res.status(403).json({
                 msg: "Debe completar su perfil primero",
                 perfilIncompleto: true
@@ -198,63 +208,69 @@ const obtenerMateriasEstudiante = async (req, res) => {
         const estudiante = await Estudiante.findOne({
             usuario: usuario._id
         });
+
         if (!estudiante) {
+
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
 
-        const nivelAcademico = estudiante.nivelAcademico;
-
-        const temas = await Tema.find({
-            estado: true,
-            nivelAcademico
-        })
-        .populate({
-            path:"unidad",
-            populate:{
-                path: "materia",
-                match: { estado: true }
-            }
-        });
-
-        const temasValidos = temas.filter( (tema) => tema.materia !== null);
-
-        const materiasIds = temasValidos.map( (tema) => tema.unidad.materia._id.toString() );
-
-        const idsUnicos = [...new Set(materiasIds)];
+        // OBTENER SOLO MATERIAS DEL NIVEL
 
         const materiasDB = await Materia.find({
-            _id: { $in: idsUnicos },
-            estado: true
+
+            estado: true,
+
+            nivelAcademico:
+                estudiante.nivelAcademico
+
         }).sort({ nombre: 1 });
 
-        // AGREGAR esFavorita A CADA MATERIA
-        const materias = materiasDB.map((materia) => {
-            const esFavorita =
-                estudiante.materiasPreferidas?.some(
-                    (id) =>
-                        id.toString() === materia._id.toString()
-                ) || false;
-            return {
-                ...materia.toObject(),
-                esFavorita
-            };
-        });
+        // AGREGAR FAVORITAS
 
-        const favoritas = materias.filter( (materia) => materia.esFavorita );
+        const materias = materiasDB.map(
+            (materia) => {
 
-        const otras = materias.filter( (materia) => !materia.esFavorita);
+                const esFavorita =
+                    estudiante.materiasPreferidas?.some(
 
-        res.status(200).json({
+                        (id) =>
+
+                            id.toString() ===
+                            materia._id.toString()
+
+                    ) || false;
+
+                return {
+
+                    ...materia.toObject(),
+
+                    esFavorita
+                };
+            }
+        );
+
+        const favoritas = materias.filter(
+            (materia) => materia.esFavorita
+        );
+
+        const otras = materias.filter(
+            (materia) => !materia.esFavorita
+        );
+
+        return res.status(200).json({
+
             favoritas,
             otras
         });
 
     } catch (error) {
+
         console.log(error);
-        res.status(500).json({
-            msg: "Error al obtener materias del estudiante"
+
+        return res.status(500).json({
+            msg: "Error al obtener materias"
         });
     }
 };

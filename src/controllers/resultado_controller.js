@@ -1,16 +1,30 @@
 import Resultado from "../models/Resultado.js";
+import Estudiante from "../models/Estudiante.js";
 
 // Obtener resultados del estudiante
-const obtenerResultadosEstudiante = async(req,res)=>{
+const obtenerResultadosEstudiante = async (req, res) => {
+
     try {
 
-        console.log(req.usuario.id);
+        // OBTENER PERFIL DEL ESTUDIANTE
+        const estudiante = await Estudiante.findOne({
+            usuario: req.usuario.id
+        });
+
+        if (!estudiante) {
+
+            return res.status(404).json({
+                msg: "Perfil estudiante no encontrado"
+            });
+        }
+
+        // OBTENER RESULTADOS
         const resultados = await Resultado.find({
-            estudiante:req.usuario.id
+            estudiante: estudiante._id
         })
         .populate({
-            path:"cuestionario",
-            select:`
+            path: "cuestionario",
+            select: `
                 titulo
                 tipoEvaluacion
                 nivel
@@ -18,39 +32,51 @@ const obtenerResultadosEstudiante = async(req,res)=>{
                 tema
                 createdAt
             `,
-            populate:[
+            populate: [
                 {
-                    path:"materia",
-                    select:"nombre"
+                    path: "materia",
+                    select: "nombre"
                 },
                 {
-                    path:"tema",
-                    select:"nombre"
+                    path: "tema",
+                    select: "nombre"
                 }
             ]
         })
-        .sort({createdAt:-1});
+        .sort({ createdAt: -1 });
 
-        console.log(resultados)
-
-        return res.json(resultados);
+        return res.status(200).json(resultados);
 
     } catch (error) {
 
         console.log(error);
 
         return res.status(500).json({
-            msg:"Error al obtener resultados"
+            msg: "Error al obtener resultados"
         });
     }
 };
 
 // Obtener detalle de resultado
 const obtenerResultadoPorId = async(req,res)=>{
+
     try {
 
         const { id } = req.params;
 
+        // OBTENER PERFIL ESTUDIANTE
+        const estudiante = await Estudiante.findOne({
+            usuario: req.usuario.id
+        });
+
+        if(!estudiante){
+
+            return res.status(404).json({
+                msg:"Perfil estudiante no encontrado"
+            });
+        }
+
+        // BUSCAR RESULTADO
         const resultado = await Resultado.findById(id)
         .populate({
             path:"cuestionario",
@@ -67,25 +93,33 @@ const obtenerResultadoPorId = async(req,res)=>{
         })
         .populate({
             path:"respuestas.pregunta",
-            select:`enunciado opciones respuestaCorrecta explicacion`
+            select:`
+                enunciado
+                opciones
+                respuestaCorrecta
+                explicacion
+            `
         });
 
         if(!resultado){
+
             return res.status(404).json({
                 msg:"Resultado no encontrado"
             });
         }
 
+        // VALIDAR PROPIETARIO
         if(
             resultado.estudiante.toString()
             !==
-            req.usuario.id
+            estudiante._id.toString()
         ){
+
             return res.status(403).json({
                 msg:"No autorizado"
             });
         }
-        console.log(resultado)
+
         return res.json(resultado);
 
     } catch (error) {
@@ -98,38 +132,51 @@ const obtenerResultadoPorId = async(req,res)=>{
     }
 };
 
-//Para reporte de estudiantes que rindieron la evaluacion
-const obtenerResultadosAdmin = async(req,res)=>{
-    try {
-        const {estudiante, materia, tema, nivelAcademico} = req.query; 
-        let filtro = {};
-        
-        let resultados = await Resultado.find(filtro)
-        .populate({
-            path:"estudiante",
-            select:`nombre apellido email`
-        })
-        .populate({
-            path:"cuestionario",
-            select:`titulo nivelAcademico materia tema`,
-            populate:[
-                {
-                    path:"materia",
-                    select:"nombre"
-                },{
-                    path:"tema",
-                    select:"nombre"
-                }
-            ]
-        })
-        .sort({createdAt:-1});
 
-        if(estudiante){
-            resultados = resultados.filter((resultado)=>{
+//Para reporte de estudiantes que rindieron la evaluacion
+const obtenerResultadosAdmin = async (req, res) => {
+
+    try {
+
+        const {
+            estudiante,
+            materia,
+            tema,
+            nivelAcademico
+        } = req.query;
+
+        let resultados = await Resultado.find()
+
+            .populate({
+                path: "estudiante",
+                select: "nombre apellido email"
+            })
+
+            .populate({
+                path: "cuestionario",
+                select: "titulo nivelAcademico materia tema",
+                populate: [
+                    {
+                        path: "materia",
+                        select: "nombre"
+                    },
+                    {
+                        path: "tema",
+                        select: "nombre"
+                    }
+                ]
+            })
+
+            .sort({ createdAt: -1 });
+
+        // FILTRO ESTUDIANTE
+        if (estudiante) {
+
+            resultados = resultados.filter((resultado) => {
 
                 const nombreCompleto = `
-                    ${resultado.estudiante?.usuario?.nombre || ""}
-                    ${resultado.estudiante?.usuario?.apellido || ""}
+                    ${resultado.estudiante?.nombre || ""}
+                    ${resultado.estudiante?.apellido || ""}
                 `.toLowerCase();
 
                 return nombreCompleto.includes(
@@ -137,38 +184,65 @@ const obtenerResultadosAdmin = async(req,res)=>{
                 );
 
             });
-        }
-        if(materia){
 
-            resultados = resultados.filter((resultado)=>
+        }
+
+        // FILTRO MATERIA
+        if (materia) {
+
+            resultados = resultados.filter((resultado) =>
+
                 resultado.cuestionario?.materia?.nombre
-                ?.toLowerCase()
-                .includes(materia.toLowerCase())
-            );
-        }
-        if(tema){
+                    ?.toLowerCase()
+                    .includes(
+                        materia.toLowerCase()
+                    )
 
-            resultados = resultados.filter((resultado)=>
+            );
+
+        }
+
+        // FILTRO TEMA
+        if (tema) {
+
+            resultados = resultados.filter((resultado) =>
+
                 resultado.cuestionario?.tema?.nombre
-                ?.toLowerCase()
-                .includes(tema.toLowerCase())
+                    ?.toLowerCase()
+                    .includes(
+                        tema.toLowerCase()
+                    )
+
             );
 
         }
-        if(nivelAcademico){
-            resultados = resultados.filter((resultado)=>
-                resultado.cuestionario?.nivelAcademico === nivelAcademico
+
+        // FILTRO NIVEL
+        if (nivelAcademico) {
+
+            resultados = resultados.filter((resultado) =>
+
+                resultado.cuestionario?.nivelAcademico
+                === nivelAcademico
+
             );
+
         }
+        
 
         return res.status(200).json(resultados);
+
     } catch (error) {
+
         console.log(error);
+
         return res.status(500).json({
-            msg:"Error al obtener resultados"
+            msg: "Error al obtener resultados"
         });
+
     }
-}
+
+};
 
 //Visualizar resultado por el admin
 const obtenerResultadoAdminPorId = async(req,res)=>{

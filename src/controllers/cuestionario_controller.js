@@ -7,6 +7,7 @@ import ResultadoDiagnostico from "../models/ResultadoDiagnostico.js";
 import mongoose from "mongoose";
 import { actualizarProgresoAcademico } from "./progresoacademico_controller.js";
 import { actualizarAnalisisAcademico } from "./recomendacion_controller.js";
+import { generarRecomendacionEstudiante } from "./recomendacion_controller.js";
 
 //Para crear un cuestionario para evaluar a un estudiante
 const crearCuestionario = async (req, res) => {
@@ -622,7 +623,7 @@ const resolverCuestionario = async (req, res) => {
             temasDebiles
         });
         //Genera recomendaciones
-        await generarRecomendaciones({
+        await generarRecomendacionEstudiante({
             estudianteId: estudiante._id
         });
 
@@ -644,7 +645,7 @@ const resolverCuestionario = async (req, res) => {
                 });
             }
         }
-
+        console.log(resultado);
         return res.json({
             msg: "Cuestionario resuelto correctamente",
             resultado: {
@@ -678,7 +679,6 @@ const resolverCuestionario = async (req, res) => {
         });
     }
 };
-
 const actualizarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;
