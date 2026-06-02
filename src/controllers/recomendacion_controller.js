@@ -1,4 +1,4 @@
-import AnalisisAcademico from "../models/recomendaciones/AnalisisAcademico.js";
+import AnalisisAcademico from "../models/Recomendaciones/AnalisisAcademico.js";
 import Recomendacion from "../models/Recomendaciones/Recomendacion.js";
 import Recurso from "../models/Recurso.js";
 import Estudiante from "../models/Estudiante.js";
