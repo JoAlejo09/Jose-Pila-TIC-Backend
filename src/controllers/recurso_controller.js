@@ -194,10 +194,10 @@ const actualizarRecurso = async(req,res)=>{
     }
 
 }
-const cambiarEstadoRecurso = async(req,res)=>{
+const cambiarEstadoRecurso = async(req,res)=>{trz
     try {
         const {id} = req.params;
-        const recurso = Recurso.findById(id);
+        const recurso = await Recurso.findById(id);
         if(!recurso){
             return res.status(404).json({
                 msg:"Recurso no encontrado"

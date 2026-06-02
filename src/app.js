@@ -20,7 +20,15 @@ import tutoriaRoutes from "./routes/tutoria_routes.js";
 const app = express();
 
 //Middlewares
-app.use(cors()); //Para permitir solicitudes desde cualquier origen
+app.use(cors(
+    {
+        origin:[process.env.FRONTEND_URL,
+            process.env.FRONTEND_URL_PRODUCTION
+        ],
+       // credentials:true,
+    })
+); //Para permitir solicitudes desde un origen especifico (en este caso, el frontend) y permitir el uso de cookies en las solicitudes.
+
 app.use(express.json()); //Para que el servidor pueda entender los datos en formato JSON
 
 app.get("/", (req, res) => {
