@@ -66,44 +66,37 @@ const generarRecomendacionEstudiante = async (
 };
 
 const obtenerMisRecomendaciones = async (req, res) => {
+  try {
+    const estudiante = await Estudiante.findOne({
+      usuario: req.usuario.id
+    });
 
-    try {
-
-        const estudiante = await Estudiante.findOne({
-            usuario: req.usuario.id
-        });
-
-        if (!estudiante) {
-
-            return res.status(404).json({
-                msg: "Perfil estudiante no encontrado"
-            });
-        }
-
-        const recomendaciones = await Recomendacion.find({
-
-            estudiante: estudiante._id,
-
-            estado: true
-
-        })
-        .populate("tema", "nombre")
-        .populate({
-            path: "recursos",
-            select: "titulo tipo dificultad"
-        })
-        .sort({ createdAt: -1 });
-
-        return res.json(recomendaciones);
-
-    } catch (error) {
-
-        console.log(error);
-
-        return res.status(500).json({
-            msg: "Error al obtener recomendaciones"
-        });
+    if (!estudiante) {
+      return res.status(404).json({
+        msg: "Perfil estudiante no encontrado"
+      });
     }
+    const recomendaciones = await Recomendacion.find({
+      estudiante: estudiante._id,
+      estado: true
+    })
+      .populate("tema", "nombre")
+      .populate({
+        path: "recursos",
+        select: "titulo tipo dificultad"
+      })
+      .sort({ createdAt: -1 });
+
+    return res.json(recomendaciones);
+
+  } catch (error) {
+
+    console.error("Error obtenerMisRecomendaciones:", error);
+
+    return res.status(500).json({
+      msg: "Error al obtener recomendaciones"
+    });
+  }
 };
 
 const actualizarAnalisisAcademico = async ({
