@@ -17,6 +17,8 @@ import progresoRoutes from "./routes/progreso_routes.js";
 import recomendacionRoutes from "./routes/recomendacion_routes.js";
 import tutoriaRoutes from "./routes/tutoria_routes.js";
 
+import dashboardRoutes from "./routes/dashboard_routes.js";
+
 const app = express();
 
 //Middlewares
@@ -51,5 +53,5 @@ app.use("/api/resultado",resultadoRoutes);
 app.use("/api/progreso", progresoRoutes);
 app.use("/api/recomendacion", recomendacionRoutes);
 app.use("/api/tutoria", tutoriaRoutes);
-
+app.use("/api/dashboard", dashboardRoutes);
 export default app;
