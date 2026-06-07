@@ -13,7 +13,13 @@ const registrarUsuario = async (req, res) => {
 
         if (!nombre || !apellido || !email || !password || !confirmpassword ) {
             return res.status(400).json({
-                msg: "Algunos campos están vacíos"
+                msg: "Todos los campos son obligatorios"
+            });
+        }
+        const regexEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!regexEmail.test(email)) {
+            return res.status(400).json({
+                msg: "Ingrese un correo electrónico válido"
             });
         }
         if (password !== confirmpassword) {
@@ -21,36 +27,37 @@ const registrarUsuario = async (req, res) => {
                 msg: "Las contraseñas no coinciden"
             });
         }
-        if (password.length < 6) {
+        if (password.length < 8) {
             return res.status(400).json({
-                msg: "La contraseña debe tener mínimo 6 caracteres"
+                msg: "La contraseña debe tener al menos 8 caracteres"
             });
         }
-        if (!email.includes("@")) {
-            return res.status(400).json({
-                msg: "Email no válido"
-            });
-        }
+
         // VALIDAR ROL
         let rolFinal = "estudiante";
         if (rol === "tutor") {
             rolFinal = "tutor";
         }
         // VALIDAR EXISTENCIA
-        const usuarioExiste = await Usuario.findOne({ email });
+        const usuarioExiste = await Usuario.findOne({ email: email.toLowerCase() });
+
         if (usuarioExiste) {
             return res.status(400).json({
-                msg: "El correo ya se encuentra registrado"
+                msg: "El correo electrónico ya se encuentra registrado"
             });
         }
+
         const nuevoUsuario = new Usuario({
             nombre,
             apellido,
-            email,
+            email: email.toLowerCase(),
             rol: rolFinal
         });
+
         nuevoUsuario.password = await nuevoUsuario.encryptPassword(password);
+
         nuevoUsuario.generarToken();
+
         await nuevoUsuario.save();
 
         await enviarEmailConfirmacion({
@@ -58,9 +65,11 @@ const registrarUsuario = async (req, res) => {
             nombre: nuevoUsuario.nombre,
             token: nuevoUsuario.token
         });
-        res.status(201).json({
+
+        return res.status(201).json({
             msg: "Usuario registrado correctamente"
         });
+
     } catch (error) {
         console.log(error);
         res.status(500).json({
@@ -68,19 +77,25 @@ const registrarUsuario = async (req, res) => {
         });
     }
 };
+
 // CONFIRMAR CUENTA
 const confirmarCuenta = async (req, res) => {
     try {
         const { token } = req.params;
+
         const usuarioEncontrado = await Usuario.findOne({ token });
+
         if (!usuarioEncontrado) {
             return res.status(400).json({
                 msg: "Token no válido"
             });
         }
+
         usuarioEncontrado.isVerified = true;
         usuarioEncontrado.token = null;
+
         await usuarioEncontrado.save();
+
         res.status(200).json({
             msg: "Cuenta confirmada correctamente"
         });
@@ -91,6 +106,7 @@ const confirmarCuenta = async (req, res) => {
         });
     }
 };
+
 // LOGIN
 const loginUsuario = async (req, res) => {
     try {
@@ -98,33 +114,37 @@ const loginUsuario = async (req, res) => {
 
         if (!email || !password) {
             return res.status(400).json({
-                msg: "Email y contraseña obligatorios"
+                msg: "Debe ingresar su correo electrónico y contraseña"
             });
         }
         const usuarioEncontrado = await Usuario.findOne({ email })
-                                .select("+password");
+        .select("+password");
+
         if (!usuarioEncontrado) {
             return res.status(400).json({
-                msg: "Usuario no encontrado"
+                msg: "No existe una cuenta asociada a ese correo electrónico"
             });
         }
+
         if (!usuarioEncontrado.isActive) {
             return res.status(403).json({
-                msg: "Tu cuenta está deshabilitada"
+                msg: "Su cuenta se encuentra deshabilitada. Contacte al administrador para obtener ayuda"
             });
         }
+
         if (!usuarioEncontrado.isVerified) {
             return res.status(403).json({
-                msg: "Tu cuenta no ha sido verificada",
+                msg: "Debe verificar su cuenta antes de iniciar sesión",
                 noVerificada: true,
                 email: usuarioEncontrado.email
             });
         }
 
         const passwordValida = await usuarioEncontrado.matchPassword(password);
+
         if (!passwordValida) {
             return res.status(400).json({
-                msg: "Contraseña incorrecta"
+                msg: "La contraseña ingresada es incorrecta"
             });
         }
         const token = generarJWT({
@@ -153,6 +173,7 @@ const loginUsuario = async (req, res) => {
         });
     }
 };
+
 // RECUPERAR PASSWORD
 const recuperarContrasena = async (req, res) => {
     try {
@@ -160,7 +181,7 @@ const recuperarContrasena = async (req, res) => {
         const usuarioEncontrado = await Usuario.findOne({ email });
         if (!usuarioEncontrado) {
             return res.status(400).json({
-                msg: "Usuario no encontrado"
+                msg: "No existe una cuenta registrada con este correo electrónico"
             });
         }
         usuarioEncontrado.generarToken();
@@ -171,8 +192,9 @@ const recuperarContrasena = async (req, res) => {
             token: usuarioEncontrado.token
         });
         res.status(200).json({
-            msg: "Correo enviado correctamente"
+            msg: "Se ha enviado un enlace de recuperación a su correo electrónico"
         });
+
     } catch (error) {
         console.log(error);
         res.status(500).json({
@@ -180,19 +202,21 @@ const recuperarContrasena = async (req, res) => {
         });
     }
 };
+
 // COMPROBAR TOKEN
 const comprobarToken = async (req, res) => {
     const { token } = req.params;
     const usuarioEncontrado = await Usuario.findOne({ token });
     if (!usuarioEncontrado) {
         return res.status(400).json({
-            msg: "Token no válido"
+            msg: "El enlace de recuperación no es válido o ha expirado"
         });
     }
     res.status(200).json({
-        msg: "Token válido"
+        msg: "Enlace válido correctamente",
     });
 };
+
 // CREAR NUEVO PASSWORD
 const crearNuevoPassword = async (req, res) => {
     try {
@@ -201,9 +225,15 @@ const crearNuevoPassword = async (req, res) => {
         const usuarioEncontrado = await Usuario.findOne({ token });
         if (!usuarioEncontrado) {
             return res.status(400).json({
-                msg: "Token no válido"
+                msg: "El enlace de recuperación no es válido o ha expirado"
             });
         }
+        if(!password || !confirmpassword) {
+            return res.status(400).json({
+                msg: "Todos los campos son obligatorios"
+            });
+        }
+
         if (password !== confirmpassword) {
             return res.status(400).json({
                 msg: "Las contraseñas no coinciden"
@@ -213,28 +243,29 @@ const crearNuevoPassword = async (req, res) => {
         usuarioEncontrado.token = null;
         await usuarioEncontrado.save();
         res.status(200).json({
-            msg: "Contraseña actualizada"
+            msg: "La contraseña ha sido actualizada correctamente"
         });
     } catch (error) {
         console.log(error);
         res.status(500).json({
-            msg: "Error del servidor"
+            msg: "Error al crear nueva contraseña"
         });
     }
 };
+
 //Reenviar confirmacion de cuenta
 const reenviarConfirmacion = async (req, res) => {
     try {
         const { email } = req.body;
         if (!email) {
             return res.status(400).json({
-                msg: "Email requerido"
+                msg: "Debe proporcionar un correo electrónico"
             });
         }
         const usuario = await Usuario.findOne({ email });
         if (!usuario) {
             return res.status(400).json({
-                msg: "Usuario no encontrado"
+                msg: "No existe una cuenta registrada con este correo electrónico"
             });
         }
         if (usuario.isVerified) {
@@ -251,15 +282,16 @@ const reenviarConfirmacion = async (req, res) => {
         });
 
         res.status(200).json({
-            msg: "Correo reenviado correctamente"
+            msg: "Se ha reenviado el correo de confirmación. Por favor revise su bandeja de entrada"
         });
     } catch (error) {
         console.log(error);
         res.status(500).json({
-            msg: "Error del servidor"
+            msg: "Error al reenviar correo de confirmación"
         });
     }
 };
+
 // Cambio Contraseña Obligatorio
 const cambiarPasswordObligatorio = async (req, res) => {
     try {
@@ -267,7 +299,7 @@ const cambiarPasswordObligatorio = async (req, res) => {
                         .select("+password");
         if (!usuario) {
             return res.status(404).json({
-                msg: "Usuario no encontrado"
+                msg: "El usuario no se encuentra registrado"
             });
         }
         const { password, confirmpassword } = req.body;
@@ -296,35 +328,27 @@ const cambiarPasswordObligatorio = async (req, res) => {
     }
 
 };
+
 //Obtener usuarios con busqueda personalizada
 const obtenerUsuarios = async (req, res) => {
-
     try {
-
         const { search } = req.query;
-
         let filtro = {};
-
         if (search) {
-
             filtro = {
-
                 $or: [
-
                     {
                         nombre: {
                             $regex: search,
                             $options: "i"
                         }
                     },
-
                     {
                         apellido: {
                             $regex: search,
                             $options: "i"
                         }
                     },
-
                     {
                         email: {
                             $regex: search,
@@ -338,31 +362,20 @@ const obtenerUsuarios = async (req, res) => {
         const usuarios = await Usuario.find(filtro)
             .select("-password -token");
 
-        // OBTENER DATOS ESTUDIANTE
-
         const usuariosConNivel = await Promise.all(
-
             usuarios.map(async (usuario) => {
-
                 let nivelAcademico = null;
-
                 if (usuario.rol === "estudiante") {
 
-                    const estudiante =
-                        await Estudiante.findOne({
+                    const estudiante = await Estudiante.findOne({
+                        usuario: usuario._id
+                    }).select("nivelAcademico");
 
-                            usuario: usuario._id
-
-                        }).select("nivelAcademico");
-
-                    nivelAcademico =
-                        estudiante?.nivelAcademico || null;
+                    nivelAcademico = estudiante?.nivelAcademico || null;
                 }
 
                 return {
-
                     ...usuario.toObject(),
-
                     nivelAcademico
                 };
             })
@@ -373,13 +386,9 @@ const obtenerUsuarios = async (req, res) => {
         );
 
     } catch (error) {
-
         console.log(error);
-
         return res.status(500).json({
-
             msg: "Error al obtener usuarios"
-
         });
     }
 };
@@ -393,7 +402,7 @@ const crearUsuario = async (req, res) => {
 
         if ( !nombre || !apellido || !email || !password ) {
             return res.status(400).json({
-                msg: "Campos obligatorios"
+                msg: "Todos los campos obligatorios deben ser completados"
             });
         }
 
@@ -429,6 +438,7 @@ const crearUsuario = async (req, res) => {
         });
     }
 };
+
 // Actualizar informacion usuario Admin
 const actualizarUsuario = async (req, res) => {
     try {
@@ -445,7 +455,17 @@ const actualizarUsuario = async (req, res) => {
 
         if (nombre) usuario.nombre = nombre;
         if (apellido) usuario.apellido = apellido;
-        if (email) usuario.email = email;
+
+        if (email && email !== usuario.email){
+            const existeEmail = await Usuario.findOne({email});
+            if (existeEmail) {
+                return res.status(400).json({
+                    msg: "El correo electrónico ya está en uso por otro usuario"
+                });
+            }
+            usuario.email = email;
+        }
+
         if (rol) usuario.rol = rol;
         if (fotoPerfil) {
             usuario.fotoPerfil = fotoPerfil;
@@ -464,6 +484,7 @@ const actualizarUsuario = async (req, res) => {
         });
     }
 };
+
 // Dar de baja usuario por Admin
 const desactivarUsuario = async (req, res) => {
     try {
@@ -478,7 +499,7 @@ const desactivarUsuario = async (req, res) => {
         usuario.isActive = false;
         await usuario.save();
         res.status(200).json({
-            msg: "Usuario desactivado"
+            msg: "Usuario desactivado correctamente"
         });
     } catch (error) {
         console.log(error);
@@ -487,6 +508,7 @@ const desactivarUsuario = async (req, res) => {
         });
     }
 };
+
 //Activar un usuario por admin
 const activarUsuario = async (req, res) => {
     try {

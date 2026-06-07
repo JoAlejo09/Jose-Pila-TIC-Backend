@@ -146,7 +146,6 @@ const obtenerResultadosAdmin = async (req, res) => {
         } = req.query;
 
         let resultados = await Resultado.find()
-
             .populate({
                 path: "estudiante",
                 select: "nombre apellido email"

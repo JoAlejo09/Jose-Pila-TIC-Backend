@@ -4,7 +4,7 @@ import { crearCuestionario, obtenerCuestionarios, obtenerCuestionariosDisponible
          obtenerCuestionarioAdminID,
          obtenerCuestionarioResolver,
          actualizarCuestionario, resolverCuestionario, eliminarCuestionario,
-         verificarDiagnosticoMateria
+         verificarDiagnosticoMateria, verificarAccesoCuestionario
 } from "../controllers/cuestionario_controller.js";
 
 import { verificarJWT, verificarRol } from "../middlewares/auth_middleware.js";
@@ -22,5 +22,6 @@ router.get( "/disponibles", verificarJWT, verificarRol("estudiante"), obtenerCue
 router.get( "/resolver/:id", verificarJWT, verificarRol("estudiante"), obtenerCuestionarioResolver );
 router.post("/resolver/:id", verificarJWT, verificarRol("estudiante"), resolverCuestionario ); 
 router.get("/diagnostico/verificar/:materiaId",verificarJWT, verificarRol("estudiante"), verificarDiagnosticoMateria)
+router.get("/:id/verificar-acceso", verificarJWT, verificarRol("estudiante"), verificarAccesoCuestionario)
 
 export default router;

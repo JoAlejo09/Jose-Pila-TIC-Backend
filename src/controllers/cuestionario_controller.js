@@ -376,7 +376,7 @@ const verificarDiagnosticoMateria = async (req, res) => {
         }
 
         const resultadoExistente = await Resultado.findOne({
-                estudiante: estudiante._id,
+                estudiante: estudiante.usuario,
                 cuestionario: cuestionarioDiagnostico._id
             });
 
@@ -475,9 +475,7 @@ const resolverCuestionario = async (req, res) => {
         // VALIDAR REINTENTO
 
         const resultadoExistente = await Resultado.findOne({
-
-            estudiante: estudiante._id,
-
+            estudiante: estudiante.usuario,
             cuestionario: id
         });
 
@@ -667,12 +665,11 @@ const resolverCuestionario = async (req, res) => {
 
             nivelResultado = "alto";
         }
-
         // GUARDAR RESULTADO
 
         const resultado = new Resultado({
 
-            estudiante: estudiante._id,
+            estudiante: estudiante.usuario,
 
             cuestionario: id,
 
@@ -862,6 +859,55 @@ const resolverCuestionario = async (req, res) => {
         });
     }
 };
+//Para verificar si se puede resolver el cuestionario
+const verificarAccesoCuestionario = async (req, res) => {
+    try{
+        const {id} = req.params;
+        const cuestionario = await Cuestionario.findById(id);
+
+        if(!cuestionario){
+            return res.status(404).json({
+                msg:"Cuestionario no encontrado"
+            });
+        }
+        if(!cuestionario.estado){
+            return res.status(400).json({
+                msg:"Cuestionario no disponible"
+            });
+        }
+        const estudiante = await Estudiante.findOne({
+            usuario:req.usuario.id
+        });
+        if(!estudiante){
+            return res.status(404).json({
+                msg:"Perfil estudiante no encontrado"
+            });
+        }
+        if(cuestionario.nivelAcademico !== estudiante.nivelAcademico){
+            return res.status(403).json({
+                msg:"No pertenece a tu nivel académico"
+            });
+        }
+        const resultadoExistente = await Resultado.findOne({
+            estudiante: estudiante.usuario,
+            cuestionario: id
+        });
+
+        if (resultadoExistente && !cuestionario.permitirReintento){
+            return res.status(400).json({
+                msg:"Ya realizaste esta evaluación. No se permite más intentos."
+            });
+        }
+        return res.status(200).json({
+            puedeResolver:true,
+        });
+    }catch(error){
+        console.log(error);
+        return res.status(500).json({
+            msg:"Error al verificar acceso a la evaluación"
+        });
+    }
+}
 
 const actualizarCuestionario = async (req, res) => {
     try {
@@ -938,4 +984,4 @@ const eliminarCuestionario = async (req, res) => {
 
 export { crearCuestionario, obtenerCuestionarios, obtenerCuestionariosDisponibles, obtenerCuestionarioAdminID,
          verificarDiagnosticoMateria, obtenerCuestionarioResolver, resolverCuestionario, actualizarCuestionario,
-         eliminarCuestionario };
+         eliminarCuestionario, verificarAccesoCuestionario };
