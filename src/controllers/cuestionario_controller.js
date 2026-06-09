@@ -12,20 +12,86 @@ import { generarRecomendacionEstudiante } from "./recomendacion_controller.js";
 //Para crear un cuestionario para evaluar a un estudiante
 const crearCuestionario = async (req, res) => {
     try {
-        let { titulo, descripcion, instrucciones, materia, tema, nivelAcademico, alcanceEvaluacion,
-              tipoEvaluacion, modoGeneracion, preguntas, cantidadPreguntas, tiempoLimite, nivel,
-              aleatorio, mostrarRevision, mostrarRespuestasCorrectas, permitirReintento } = req.body;
+        let {
+            titulo,
+            descripcion,
+            instrucciones,
+            materia,
+            tema,
+            nivelAcademico,
+            alcanceEvaluacion,
+            tipoEvaluacion,
+            modoGeneracion,
+            preguntas,
+            cantidadPreguntas,
+            tiempoLimite,
+            nivel,
+            aleatorio,
+            mostrarRevision,
+            mostrarRespuestasCorrectas,
+            permitirReintento
+        } = req.body;
 
         // VALIDACIONES GENERALES
-        if ( !titulo || !materia || !nivelAcademico || !alcanceEvaluacion || !tipoEvaluacion || 
-             !modoGeneracion || !cantidadPreguntas ) {
-
+        if (
+            !titulo ||
+            !materia ||
+            !nivelAcademico ||
+            !alcanceEvaluacion ||
+            !tipoEvaluacion ||
+            !modoGeneracion ||
+            !cantidadPreguntas
+        ) {
             return res.status(400).json({
-                msg: "Campos obligatorios"
+                msg: "Debe completar todos los campos obligatorios"
             });
         }
 
-        const nivelesValidos = [ "1ro BGU", "2do BGU", "3ro BGU"];
+        // VALIDAR OBJECT ID
+        if (!mongoose.Types.ObjectId.isValid(materia)) {
+            return res.status(400).json({
+                msg: "Materia inválida"
+            });
+        }
+
+        if (tema && !mongoose.Types.ObjectId.isValid(tema)) {
+            return res.status(400).json({
+                msg: "Tema inválido"
+            });
+        }
+
+        // VALIDAR TÍTULO
+        if (titulo.trim().length < 3) {
+            return res.status(400).json({
+                msg: "El título debe tener al menos 3 caracteres"
+            });
+        }
+
+        // VALIDAR CANTIDAD DE PREGUNTAS
+        if (
+            isNaN(cantidadPreguntas) ||
+            Number(cantidadPreguntas) <= 0
+        ) {
+            return res.status(400).json({
+                msg: "La cantidad de preguntas debe ser mayor a cero"
+            });
+        }
+
+        // VALIDAR TIEMPO LÍMITE
+        if (
+            tiempoLimite &&
+            Number(tiempoLimite) <= 0
+        ) {
+            return res.status(400).json({
+                msg: "El tiempo límite debe ser mayor a cero"
+            });
+        }
+
+        const nivelesValidos = [
+            "1ro BGU",
+            "2do BGU",
+            "3ro BGU"
+        ];
 
         if (!nivelesValidos.includes(nivelAcademico)) {
             return res.status(400).json({
@@ -33,7 +99,10 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const tiposEvaluacion = [ "diagnostico", "refuerzo" ];
+        const tiposEvaluacion = [
+            "diagnostico",
+            "refuerzo"
+        ];
 
         if (!tiposEvaluacion.includes(tipoEvaluacion)) {
             return res.status(400).json({
@@ -41,7 +110,10 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const modosValidos = ["manual", "dinamico" ];
+        const modosValidos = [
+            "manual",
+            "dinamico"
+        ];
 
         if (!modosValidos.includes(modoGeneracion)) {
             return res.status(400).json({
@@ -49,7 +121,10 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const alcancesValidos = [ "materia", "tema"];
+        const alcancesValidos = [
+            "materia",
+            "tema"
+        ];
 
         if (!alcancesValidos.includes(alcanceEvaluacion)) {
             return res.status(400).json({
@@ -57,11 +132,23 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
+        // VALIDAR EXISTENCIA DE MATERIA
+        const materiaExiste = await Materia.findById(materia);
+
+        if (!materiaExiste) {
+            return res.status(404).json({
+                msg: "Materia no encontrada"
+            });
+        }
+
+        // SI ES EVALUACIÓN POR MATERIA
         if (alcanceEvaluacion === "materia") {
             tema = null;
         }
 
+        // SI ES EVALUACIÓN POR TEMA
         if (alcanceEvaluacion === "tema") {
+
             if (!tema) {
                 return res.status(400).json({
                     msg: "Debe seleccionar un tema"
@@ -95,11 +182,29 @@ const crearCuestionario = async (req, res) => {
             }
         }
 
+        // VALIDAR DIFICULTAD
+        const nivelesDificultad = [
+            "facil",
+            "medio",
+            "dificil"
+        ];
+
         const nivelFinal = nivel || "medio";
+
+        if (
+            modoGeneracion === "dinamico" &&
+            !nivelesDificultad.includes(nivelFinal)
+        ) {
+            return res.status(400).json({
+                msg: "Nivel de dificultad inválido"
+            });
+        }
+
         let preguntasSeleccionadas = [];
 
-        //Para ingreso de preguntas manualmente
+        // GENERACIÓN MANUAL
         if (modoGeneracion === "manual") {
+
             if (!preguntas || preguntas.length === 0) {
                 return res.status(400).json({
                     msg: "Debe seleccionar preguntas"
@@ -121,7 +226,9 @@ const crearCuestionario = async (req, res) => {
                 filtroPreguntas
             );
 
-            if (preguntasDB.length !== preguntas.length) {
+            if (
+                preguntasDB.length !== preguntas.length
+            ) {
                 return res.status(400).json({
                     msg: "Existen preguntas inválidas"
                 });
@@ -131,14 +238,17 @@ const crearCuestionario = async (req, res) => {
                 pregunta => pregunta._id
             );
 
-            if ( preguntasSeleccionadas.length !== Number(cantidadPreguntas)) {
+            if (
+                preguntasSeleccionadas.length !==
+                Number(cantidadPreguntas)
+            ) {
                 return res.status(400).json({
                     msg: "Cantidad de preguntas incorrecta"
                 });
             }
         }
 
-        //Para ingreso de preguntas dinamicas
+        // GENERACIÓN DINÁMICA
         if (modoGeneracion === "dinamico") {
 
             const filtroPreguntas = {
@@ -164,7 +274,10 @@ const crearCuestionario = async (req, res) => {
                 }
             ]);
 
-            if ( preguntasDB.length < Number(cantidadPreguntas)) {
+            if (
+                preguntasDB.length <
+                Number(cantidadPreguntas)
+            ) {
                 return res.status(400).json({
                     msg: `Solo existen ${preguntasDB.length} preguntas disponibles`
                 });
@@ -175,15 +288,16 @@ const crearCuestionario = async (req, res) => {
             );
         }
 
-        //Agregar un nuevo cuestionario a la base de datos
+        // CREAR CUESTIONARIO
         const cuestionario = new Cuestionario({
             titulo: titulo.trim(),
             descripcion: descripcion?.trim() || "",
             instrucciones: instrucciones?.trim() || "",
             materia,
-            tema:alcanceEvaluacion === "tema"
-                ? tema
-                : null,
+            tema:
+                alcanceEvaluacion === "tema"
+                    ? tema
+                    : null,
             nivelAcademico,
             alcanceEvaluacion,
             tipoEvaluacion,
@@ -191,24 +305,27 @@ const crearCuestionario = async (req, res) => {
             preguntas: preguntasSeleccionadas,
 
             cantidadPreguntas: Number(cantidadPreguntas),
-            tiempoLimite: tiempoLimite || 30,
+            tiempoLimite: Number(tiempoLimite) || 30,
             nivel: nivelFinal,
             aleatorio: aleatorio || false,
             mostrarRevision: mostrarRevision ?? true,
-            mostrarRespuestasCorrectas: mostrarRespuestasCorrectas ?? true,
-            permitirReintento: permitirReintento || false
+            mostrarRespuestasCorrectas:
+                mostrarRespuestasCorrectas ?? true,
+            permitirReintento:
+                permitirReintento || false
         });
 
         await cuestionario.save();
 
-        res.status(201).json({
+        return res.status(201).json({
             msg: "Cuestionario creado correctamente",
             cuestionario
         });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+
+        return res.status(500).json({
             msg: "Error al crear cuestionario"
         });
     }
@@ -221,7 +338,8 @@ const obtenerCuestionarios = async (req, res) => {
         const cuestionarios = await Cuestionario.find()
                 .populate("materia", "nombre")
                 .populate("tema", "nombre")
-                .sort({ createdAt: -1 });
+                .sort({ createdAt: -1 })
+                .lean();
 
         res.json(cuestionarios);
 
@@ -269,6 +387,12 @@ const obtenerCuestionariosDisponibles = async (req, res) => {
 const obtenerCuestionarioAdminID = async (req, res) => {
     try {
         const { id } = req.params;
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de cuestionario inválido"
+            });
+        }
+
         const cuestionario = await Cuestionario.findById(id)
             .populate("materia", "nombre")
             .populate("tema", "nombre")
@@ -293,6 +417,12 @@ const obtenerCuestionarioAdminID = async (req, res) => {
 const obtenerCuestionarioResolver = async (req, res) => {
     try {
         const { id } = req.params;
+
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de cuestionario inválido"
+            });
+        }
 
         const cuestionario = await Cuestionario.findById(id)
             .populate("materia", "nombre")
@@ -336,7 +466,7 @@ const obtenerCuestionarioResolver = async (req, res) => {
             );
         }
 
-        res.json(cuestionario);
+        res.status(200).json(cuestionario);
     } catch (error) {
         console.log(error);
         res.status(500).json({
@@ -349,6 +479,12 @@ const obtenerCuestionarioResolver = async (req, res) => {
 const verificarDiagnosticoMateria = async (req, res) => {
     try {
         const { materiaId } = req.params;
+
+        if(!mongoose.Types.ObjectId.isValid(materiaId)){
+            return res.status(400).json({
+                msg:"ID de materia inválido"
+            });
+        }
 
         const estudiante = await Estudiante.findOne({
             usuario: req.usuario.id
@@ -384,7 +520,7 @@ const verificarDiagnosticoMateria = async (req, res) => {
             return res.json({ tieneDiagnostico: true });
         }
 
-        res.json({
+        res.status(200).json({
             tieneDiagnostico: false,
             cuestionarioId: cuestionarioDiagnostico._id
         });
@@ -408,7 +544,6 @@ const resolverCuestionario = async (req, res) => {
         const { respuestas, tiempoEmpleado } = req.body;
 
         if (!respuestas || respuestas.length === 0) {
-
             return res.status(400).json({
                 msg: "Debe enviar respuestas"
             });
@@ -418,7 +553,6 @@ const resolverCuestionario = async (req, res) => {
             .populate("preguntas");
 
         if (!cuestionario) {
-
             return res.status(404).json({
                 msg: "Cuestionario no encontrado"
             });
@@ -432,7 +566,6 @@ const resolverCuestionario = async (req, res) => {
         }
 
         if (cuestionario.preguntas.length === 0) {
-
             return res.status(400).json({
                 msg: "El cuestionario no tiene preguntas"
             });
@@ -443,161 +576,104 @@ const resolverCuestionario = async (req, res) => {
         });
 
         if (!estudiante) {
-
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
 
-        if (
-            cuestionario.nivelAcademico
-            !==
-            estudiante.nivelAcademico
-        ) {
-
+        if ( cuestionario.nivelAcademico !== estudiante.nivelAcademico ) {
             return res.status(403).json({
                 msg: "Nivel académico incorrecto"
             });
         }
 
         // VALIDAR TIEMPO
-
-        if (
-            tiempoEmpleado >
-            cuestionario.tiempoLimite * 60
-        ) {
-
+        if ( tiempoEmpleado > cuestionario.tiempoLimite * 60 ) {
             return res.status(400).json({
                 msg: "Tiempo excedido"
             });
         }
 
         // VALIDAR REINTENTO
-
         const resultadoExistente = await Resultado.findOne({
             estudiante: estudiante.usuario,
             cuestionario: id
         });
 
-        if (
-            resultadoExistente &&
-            !cuestionario.permitirReintento
-        ) {
-
+        if ( resultadoExistente && !cuestionario.permitirReintento ) {
             return res.status(400).json({
                 msg: "Ya resolviste este cuestionario"
             });
         }
 
         // NORMALIZAR RESPUESTAS
-
         const normalizar = (texto) =>
             texto?.toString().trim().toLowerCase();
 
         // VARIABLES RESULTADO
-
         let correctas = 0;
-
         let incorrectas = 0;
-
         let sinResponder = 0;
 
         const detalleRespuestas = [];
-
         const temasMap = {};
 
         // RECORRER PREGUNTAS
-
         for (const pregunta of cuestionario.preguntas) {
-
             const respuestaEncontrada = respuestas.find(
-
                 (r) =>
                     r.pregunta ===
                     pregunta._id.toString()
             );
 
-            const respuestaUsuario =
-                respuestaEncontrada?.respuestaUsuario || "";
+            const respuestaUsuario = respuestaEncontrada?.respuestaUsuario || "";
 
             let esCorrecta = false;
 
             const temaId = pregunta.tema?.toString();
 
             // CREAR TEMA EN MAPA
-
             if (temaId && !temasMap[temaId]) {
-
                 temasMap[temaId] = {
-
                     tema: pregunta.tema,
-
                     correctas: 0,
-
                     incorrectas: 0
                 };
             }
 
             // SIN RESPONDER
-
             if (!respuestaUsuario) {
-
                 sinResponder++;
-
                 if (temaId) {
-
                     temasMap[temaId].incorrectas++;
                 }
             }
 
             // RESPUESTA CORRECTA
-
-            else if (
-
-                normalizar(respuestaUsuario)
-                ===
-                normalizar(pregunta.respuestaCorrecta)
-
+            else if ( normalizar(respuestaUsuario) === normalizar(pregunta.respuestaCorrecta)
             ) {
-
                 correctas++;
-
                 esCorrecta = true;
-
                 if (temaId) {
-
                     temasMap[temaId].correctas++;
                 }
-
             }
 
             // RESPUESTA INCORRECTA
-
             else {
-
                 incorrectas++;
-
                 if (temaId) {
-
                     temasMap[temaId].incorrectas++;
                 }
             }
 
             // DETALLE RESPUESTA
-
             detalleRespuestas.push({
-
                 pregunta: pregunta._id,
-
                 tema: pregunta.tema,
-
                 respuestaUsuario,
-
-                respuestaCorrecta:
-                    pregunta.respuestaCorrecta,
-
+                respuestaCorrecta: pregunta.respuestaCorrecta,
                 esCorrecta,
-
                 explicacion:
                     pregunta.explicacion || ""
             });
@@ -606,37 +682,25 @@ const resolverCuestionario = async (req, res) => {
         // ANALÍTICA POR TEMAS
 
         const temasFuertes = [];
-
         const temasDebiles = [];
 
         Object.values(temasMap).forEach((tema) => {
-
-            if (
-                tema.incorrectas >= tema.correctas
-            ) {
-
+            if ( tema.incorrectas >= tema.correctas ) {
                 temasDebiles.push({
-
                     tema: tema.tema,
-
                     incorrectas: tema.incorrectas
                 });
 
             } else {
-
                 temasFuertes.push({
-
                     tema: tema.tema,
-
                     correctas: tema.correctas
                 });
             }
         });
 
         // PORCENTAJE
-
         const porcentaje = Number(
-
             (
                 (
                     correctas /
@@ -646,223 +710,144 @@ const resolverCuestionario = async (req, res) => {
         );
 
         // APROBADO
-
         const aprobado = porcentaje >= 70;
 
         // NIVEL RESULTADO
 
         let nivelResultado = "";
-
         if (porcentaje < 50) {
-
             nivelResultado = "bajo";
-
         } else if (porcentaje < 80) {
-
             nivelResultado = "medio";
-
         } else {
-
             nivelResultado = "alto";
         }
         // GUARDAR RESULTADO
 
         const resultado = new Resultado({
-
             estudiante: estudiante.usuario,
-
             cuestionario: id,
-
             materia: cuestionario.materia,
-
             respuestas: detalleRespuestas,
-
             correctas,
-
             incorrectas,
-
             sinResponder,
-
             puntaje: correctas,
-
             porcentaje,
-
             nivelResultado,
-
             aprobado,
-
             tiempoEmpleado,
-
             temasDebiles,
-
             temasFuertes
         });
 
         await resultado.save();
 
         // ACTUALIZAR PROGRESO
-
         await actualizarProgresoAcademico({
-
             estudianteId: estudiante._id,
-
-            tipoEvaluacion:
-                cuestionario.tipoEvaluacion,
-
+            tipoEvaluacion: cuestionario.tipoEvaluacion,
             porcentaje,
-
             aprobado,
-
             tiempoEmpleado,
-
             temasFuertes,
-
             temasDebiles
         });
 
         // PREPARAR TEMAS PARA ANALÍTICA
-
         const temasAnalisis = [
-
             ...temasFuertes.map((tema) => ({
-
                 tema: tema.tema,
-
-                correctas:
-                    tema.correctas || 0,
-
+                correctas: tema.correctas || 0,
                 incorrectas: 0
             })),
 
             ...temasDebiles.map((tema) => ({
-
                 tema: tema.tema,
-
                 correctas: 0,
-
-                incorrectas:
-                    tema.incorrectas || 0
+                incorrectas: tema.incorrectas || 0
             }))
         ];
 
         // ACTUALIZAR ANALÍTICA
 
         await actualizarAnalisisAcademico({
-
             estudianteId: estudiante._id,
-
             cuestionarioId: cuestionario._id,
-
             materiaId: cuestionario.materia,
-
             temas: temasAnalisis
         });
 
         // GENERAR RECOMENDACIONES
 
-        await generarRecomendacionEstudiante(
-            estudiante._id
-        );
+        await generarRecomendacionEstudiante( estudiante._id );
 
         // RESULTADO DIAGNÓSTICO
 
-        if (
-            cuestionario.tipoEvaluacion
-            ===
-            "diagnostico"
-        ) {
-
-            const diagnosticoExiste =
-                await ResultadoDiagnostico.findOne({
-
+        if ( cuestionario.tipoEvaluacion === "diagnostico" ) {
+            const diagnosticoExiste = await ResultadoDiagnostico.findOne({
                     estudiante: estudiante._id,
-
                     materia: cuestionario.materia
                 });
 
             if (!diagnosticoExiste) {
-
                 await ResultadoDiagnostico.create({
-
                     estudiante: estudiante._id,
-
                     materia: cuestionario.materia,
-
                     cuestionario: cuestionario._id,
-
                     puntaje: porcentaje,
-
                     nivelResultado,
-
                     aprobado
                 });
             }
         }
 
         return res.json({
-
-            msg:
-                "Cuestionario resuelto correctamente",
-
+            msg: "Cuestionario resuelto correctamente",
             resultado: {
-
                 _id: resultado._id,
-
                 correctas,
-
                 incorrectas,
-
                 sinResponder,
-
                 puntaje: correctas,
-
                 porcentaje,
-
                 nivelResultado,
-
                 aprobado,
-
                 tiempoEmpleado,
-
                 temasDebiles,
-
                 temasFuertes
             },
 
-            revision:
-
-                cuestionario.mostrarRevision
-
+            revision: cuestionario.mostrarRevision
                     ? detalleRespuestas.map((r) => ({
-
                         ...r,
-
                         respuestaCorrecta:
-
                             cuestionario
                                 .mostrarRespuestasCorrectas
-
                                 ? r.respuestaCorrecta
-
                                 : undefined
                     }))
-
                     : []
         });
 
     } catch (error) {
-
         console.log(error);
-
         return res.status(500).json({
             msg: "Error al resolver cuestionario"
         });
     }
 };
+
 //Para verificar si se puede resolver el cuestionario
 const verificarAccesoCuestionario = async (req, res) => {
     try{
         const {id} = req.params;
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de cuestionario inválido"
+            });
+        }
+
         const cuestionario = await Cuestionario.findById(id);
 
         if(!cuestionario){
@@ -912,6 +897,11 @@ const verificarAccesoCuestionario = async (req, res) => {
 const actualizarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de cuestionario inválido"
+            });
+        }
 
         const cuestionario = await Cuestionario.findById(id);
 
@@ -921,7 +911,7 @@ const actualizarCuestionario = async (req, res) => {
             });
         }
 
-        const camposPermitidos = ["titulo", "descripcion", "instrucciones", "tiempoLimite", "nivel",
+        const camposPermitidos = ["titulo", "descripcion", "instrucciones", "tiempoLimite", "nivelAcademic",
                                   "aleatorio", "mostrarRevision", "mostrarRespuestasCorrectas",
                                   "permitirReintento", "estado" ];
 
@@ -934,7 +924,7 @@ const actualizarCuestionario = async (req, res) => {
 
         await cuestionario.save();
 
-        res.json({
+        return res.status(200).json({
             msg: "Cuestionario actualizado correctamente",
             cuestionario
         });
@@ -952,6 +942,12 @@ const eliminarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;
 
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de cuestionario inválido"
+            });
+        }
+
         const cuestionario = await Cuestionario.findById(id);
 
         if (!cuestionario) {
@@ -964,7 +960,7 @@ const eliminarCuestionario = async (req, res) => {
 
         await cuestionario.save();
 
-        res.json({
+        return res.status(200).json({
             msg: `Cuestionario ${
                     cuestionario.estado
                         ? "activado"
