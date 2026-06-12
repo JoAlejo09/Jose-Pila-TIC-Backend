@@ -3,6 +3,7 @@ import Pregunta from "../models/Pregunta.js";
 import Resultado from "../models/Resultado.js";
 import Estudiante from "../models/Estudiante.js";
 import Tema from "../models/Tema.js";
+import Materia from "../models/Materia.js";
 import ResultadoDiagnostico from "../models/ResultadoDiagnostico.js";
 import mongoose from "mongoose";
 import { actualizarProgresoAcademico } from "./progresoacademico_controller.js";
@@ -341,6 +342,7 @@ const obtenerCuestionarios = async (req, res) => {
                 .sort({ createdAt: -1 })
                 .lean();
 
+        console.log(cuestionarios[0])
         res.json(cuestionarios);
 
     } catch (error) {
