@@ -144,7 +144,7 @@ const loginUsuario = async (req, res) => {
                 msg: "Debe ingresar su correo electrónico y contraseña"
             });
         }
-        const emailCorregido = email.trim.toLowerCase();
+        const emailCorregido = email.trim().toLowerCase();
         const usuarioEncontrado = await Usuario.findOne({ email: emailCorregido})
         .select("+password");
 
