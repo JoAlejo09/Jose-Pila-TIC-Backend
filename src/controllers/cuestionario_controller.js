@@ -69,12 +69,14 @@ const crearCuestionario = async (req, res) => {
         }
 
         // VALIDAR CANTIDAD DE PREGUNTAS
+        const cantidad = Number(cantidadPreguntas);
         if (
+            !Number.isInteger(cantidad)||
             isNaN(cantidadPreguntas) ||
             Number(cantidadPreguntas) <= 0
         ) {
             return res.status(400).json({
-                msg: "La cantidad de preguntas debe ser mayor a cero"
+                msg: "La cantidad de preguntas debe ser entero y mayor a 0"
             });
         }
 
@@ -141,6 +143,11 @@ const crearCuestionario = async (req, res) => {
                 msg: "Materia no encontrada"
             });
         }
+        if(!materiaExiste.estado){
+            return res.status(400).json({
+                msg:"La materia esta desactivada. No se puede usar."
+            })
+        }
 
         // SI ES EVALUACIÓN POR MATERIA
         if (alcanceEvaluacion === "materia") {
@@ -162,6 +169,11 @@ const crearCuestionario = async (req, res) => {
                 return res.status(404).json({
                     msg: "Tema no encontrado"
                 });
+            }
+            if(!temaExiste.estado){
+                return res.status(400).json({
+                    msg:"El tema esta desactivado. No se puede usar"
+                })
             }
 
             if (

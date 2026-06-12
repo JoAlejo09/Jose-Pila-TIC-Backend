@@ -62,8 +62,9 @@ const actualizarPerfil = async (req, res) => {
                 perfil = new Estudiante({ usuario: usuario._id});
             }
             const { telefono, direccion, fechaNacimiento, institucion, nivelAcademico } = req.body;
+            const telefonoRegex = /^[0-9]{7,15}$/;
 
-            if ( telefono !== undefined && telefono !== "") {
+            if(telefono && telefonoRegex.test(telefono)){
                 perfil.telefono = telefono;
             }
 
@@ -73,7 +74,7 @@ const actualizarPerfil = async (req, res) => {
             if ( fechaNacimiento !== undefined && fechaNacimiento !== "" ) {
                 perfil.fechaNacimiento = fechaNacimiento;
             }
-            if ( institucion !== undefined && institucion !== "") {
+            if ( institucion !== undefined && institucion !== "" && institucion.trim().length < 3) {
                 perfil.institucion = institucion;
             }
             if ( nivelAcademico !== undefined && nivelAcademico !== "" ) {
