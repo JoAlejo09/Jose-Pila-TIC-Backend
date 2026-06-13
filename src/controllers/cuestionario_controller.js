@@ -739,7 +739,7 @@ const resolverCuestionario = async (req, res) => {
         // GUARDAR RESULTADO
 
         const resultado = new Resultado({
-            estudiante: estudiante.usuario,
+            estudiante: estudiante._id,
             cuestionario: id,
             materia: cuestionario.materia,
             respuestas: detalleRespuestas,

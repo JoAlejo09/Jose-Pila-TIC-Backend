@@ -108,6 +108,9 @@ const obtenerResultadoPorId = async(req,res)=>{
             });
         }
 
+        console.log("resultado.estudiante:", resultado.estudiante.toString());
+        console.log("estudiante._id:", estudiante._id.toString());
+        
         // VALIDAR PROPIETARIO
         if(
             resultado.estudiante.toString()
