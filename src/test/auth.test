@@ -1,0 +1,148 @@
+import request from "supertest";
+
+//PRUEBA DE INICIO DE SESION
+/*describe("Login API", () => {
+    test("Inicio de Sesion", async () => {
+    const response = await request(
+        "https://tic-backend-refacademy.onrender.com"
+    )
+        .post("/api/auth/login")
+        .send({
+            email: "liris91076@ameady.com",
+            password: "abcde12345"
+        });
+
+    console.log("TEXT:", response.text);
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toHaveProperty("token");
+    expect(response.body).toHaveProperty("user");
+    expect(response.body).toHaveProperty("debeCambiarPassword");
+    expect(response.body.msg).toBe("Inicio de sesión exitoso");
+    expect(response.statusCode).toBe(200);
+});
+});*/
+
+// PRUEBA DE REGISTRAR NUEVO USUARIO 
+/*describe("Registro API", () => {
+  test(
+    "Registro de Usuario",
+    async () => {
+      const response = await request(
+        "https://tic-backend-refacademy.onrender.com"
+      )
+        .post("/api/auth/registrar")
+        .send({
+          nombre: "Jose",
+          apellido: "Pila",
+          email: "alejopila6@gmail.com",
+          password: "Password123@",
+          confirmpassword: "Password123@",
+          rol: "estudiante",
+        });
+
+      console.log("STATUS:", response.statusCode);
+      console.log("BODY:", response.body);
+      console.log("TEXT:", response.text);
+
+      expect(response.statusCode).toBe(201);
+    },
+    15000
+  );
+});*/
+//PRUEBA UNITARIA DE TUTORIAS
+////Obtener tutorias
+/*describe("GET /api/tutoria/mis-tutorias", () => {
+  let token;
+
+  beforeAll(async () => {
+    const loginResponse = await request("https://tic-backend-refacademy.onrender.com")
+      .post("/api/auth/login")
+      .send({
+        email: "liris91076@ameady.com",
+        password: "abcde12345"
+      });
+
+    token = loginResponse.body.token;
+  });
+
+  test("Debe obtener las tutorías del estudiante", async () => {
+    const response = await request("https://tic-backend-refacademy.onrender.com")
+      .get("/api/tutoria/mis-tutorias")
+      .set("Authorization", `Bearer ${token}`);
+
+    console.log(
+      JSON.stringify(response.body, null, 2)
+    );
+
+    expect(response.statusCode).toBe(200);
+
+    // Si devuelve un arreglo
+    expect(Array.isArray(response.body)).toBe(true);
+  });
+});
+describe("Calificar Tutoria API", () => {
+
+  test(
+    "Debe calificar una tutoría realizada",
+    async () => {
+
+      // Login estudiante
+      const loginResponse = await request(
+        "https://tic-backend-refacademy.onrender.com"
+      )
+      .post("/api/auth/login")
+      .send({
+        email: "liris91076@ameady.com",
+        password: "abcde12345"
+      });
+
+      const token = loginResponse.body.token;
+
+      // Calificar tutoría
+      const response = await request(
+        "https://tic-backend-refacademy.onrender.com"
+      )
+      .put("/api/tutoria/calificar/6a15d8278472e6c5891cf1b0")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        calificacion: 5,
+        comentarioCalificacion: "Excelente tutoría"
+      });
+
+      console.log("STATUS:", response.statusCode);
+      console.log("BODY:", response.body);
+
+      expect(response.statusCode).toBe(200);
+      expect(response.body.msg).toBe("Tutoría calificada");
+
+    },
+    15000
+  );
+
+});*/
+//PRUEBA UNITARIA FUNCIONALIDAD CREAR RECURSO
+/*describe("Obtener temas API", ()=>{
+  test("Debe obtener temas registrados",
+    async ()=>{
+      const login = await request(
+        "https://tic-backend-refacademy.onrender.com"
+      )
+      .post("/api/auth/login")
+      .send({
+        email:"admin@test.com",
+        password: "123456"
+      });
+      const token = login.body.token;
+      const response = await request(
+        "https://tic-backend-refacademy.onrender.com"
+      )
+      .get("/api/tema")
+      .set("Authorization", `Bearer ${token}`);
+      console.log(
+        JSON.stringify(response.body, null, 2)
+      );
+
+      expect(response.statusCode).toBe(200);
+    }, 15000
+  );
+});*/
