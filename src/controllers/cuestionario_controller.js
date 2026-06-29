@@ -526,7 +526,7 @@ const verificarDiagnosticoMateria = async (req, res) => {
         }
 
         const resultadoExistente = await Resultado.findOne({
-                estudiante: estudiante.usuario,
+                estudiante: estudiante._id,
                 cuestionario: cuestionarioDiagnostico._id
             });
 

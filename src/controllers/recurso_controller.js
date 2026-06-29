@@ -3,6 +3,7 @@ import Recurso from "../models/Recurso.js";
 import Tema from "../models/Tema.js";
 import Unidad from "../models/Unidad.js";
 import { registrarUsoRecurso } from "./progresoacademico_controller.js";
+import cloudinary from "../config/cloudinary.js";
 
 const obtenerRecursos = async(req, res)=>{
     try {
@@ -17,6 +18,7 @@ const obtenerRecursos = async(req, res)=>{
                 }
             }
         ).sort({createdAt: -1});
+        console.log(recursos)
         res.status(200).json(recursos);
 
     } catch (error) {
@@ -29,14 +31,15 @@ const obtenerRecursos = async(req, res)=>{
 } 
 const crearRecurso = async(req, res)=>{
     try {
-        const {tema, titulo, descripcion, tipo, url, contenido, nivelDificultad} = req.body;
+        const { tema, titulo, descripcion, tipo, 
+                url, contenido, nivelDificultad, modoImagen} = req.body;
 
         if(!tema || !titulo || !tipo){
             return res.status(400).json({
                 msg:"Campos obligatorios"
             });
         }
-        const tiposValidos = ["pdf","youtube", "teoria"];
+        const tiposValidos = ["imagen","pdf","youtube", "teoria"];
         if(!tiposValidos.includes(tipo)){
             return res.status(400).json({
                 msg:"Tipo de recurso no valido"
@@ -53,22 +56,62 @@ const crearRecurso = async(req, res)=>{
                 msg:"El tema esta inactivo"
             });
         }
-        if((tipo === "pdf" || tipo === "youtube") && !url){
+        let urlRecurso = "";
+        //para pdf o youtube
+        if(tipo === "pdf" || tipo === "youtube"){
+            if(!url){
             return res.status(400).json({
                 msg:"La URL es obigatoria"
             });
+            }
+            urlRecurso = url;
         }
         if(tipo === "teoria" && !contenido){
             return res.status(400).json({
                 msg:"El contenido es obligatorio"
             });
         }
+        if(tipo === "imagen"){
+            if(!modoImagen){
+                return res.status(400).json({
+                    msg:"Debe seleccionar el origen de la imagen"
+                });
+            }
+            if(modoImagen === "url"){
+                if(!url){
+                    return res.status(400).json({
+                        msg:"Debe ingresar el URL de la imagen"
+                    });
+                }
+                urlRecurso = url;
+            }
+            if(modoImagen === "cloudinary"){
+                if(!req.file){
+                    return res.status(400).json({
+                        msg:"Debe seleccionar una imagen"
+                    });
+                }
+                const resultado = await cloudinary.uploader.upload(
+                    req.file.path,
+                    {
+                        folder:"recursos",
+                        transformation:[
+                            {
+                                quality:"auto",
+                                fetch_format:"auto"
+                            }
+                        ]
+                    }
+                );
+                urlRecurso = resultado.secure_url;
+            }
+        }
         const nuevoRecurso = new Recurso({
             tema,
             titulo: titulo.trim(),
             descripcion: descripcion?.trim() || "",
             tipo,
-            url: url || "",
+            url: urlRecurso,
             contenido: contenido?.trim() || "",
             nivelDificultad: nivelDificultad || "basico"
         });
@@ -95,105 +138,189 @@ const crearRecurso = async(req, res)=>{
         });
     }
 }
-const actualizarRecurso = async(req,res)=>{
+const actualizarRecurso = async (req, res) => {
+
     try {
-        const {id} = req.params;
-        const { tema, titulo, descripcion, tipo, url, contenido, nivelDificultad, estado } = req.body;
+
+        const { id } = req.params;
+
+        const {
+            tema,
+            titulo,
+            descripcion,
+            tipo,
+            url,
+            contenido,
+            nivelDificultad,
+            estado,
+            modoImagen
+        } = req.body;
 
         const recurso = await Recurso.findById(id);
-        if(!recurso){
+
+        if (!recurso) {
             return res.status(404).json({
-                msg:"Recurso no encontrado"
+                msg: "Recurso no encontrado"
             });
         }
 
-        if(tema){
+        // VALIDAR TEMA
+        if (tema) {
+
             const temaExiste = await Tema.findById(tema);
-            if(!temaExiste){
+
+            if (!temaExiste) {
                 return res.status(404).json({
-                    msg:"Tema no encontrado"
+                    msg: "Tema no encontrado"
                 });
             }
-            if(!temaExiste.estado){
+
+            if (!temaExiste.estado) {
                 return res.status(400).json({
-                    msg:"El tema está inactivo"
+                    msg: "El tema está inactivo"
                 });
             }
+
             recurso.tema = tema;
         }
 
+        // VALIDAR TIPO
         const tipoFinal = tipo || recurso.tipo;
-        const tiposValidos = [ "pdf", "youtube", "teoria" ];
-        if(!tiposValidos.includes(tipoFinal)){
+
+        const tiposValidos = [
+            "pdf",
+            "youtube",
+            "teoria",
+            "imagen"
+        ];
+
+        if (!tiposValidos.includes(tipoFinal)) {
             return res.status(400).json({
-                msg:"Tipo inválido"
+                msg: "Tipo inválido"
             });
         }
 
-        const urlFinal = url !== undefined
-                ? url
-                : recurso.url;
+        // VALIDAR SEGÚN EL TIPO
 
-        const contenidoFinal = contenido !== undefined
-                ? contenido
-                : recurso.contenido;
+        if (
+            (tipoFinal === "pdf" ||
+            tipoFinal === "youtube") &&
+            !url
+        ) {
 
-        if((tipoFinal === "pdf" || tipoFinal === "youtube") && !urlFinal){
             return res.status(400).json({
-                msg:"La URL es obligatoria"
+                msg: "La URL es obligatoria"
             });
+
         }
 
-        if( tipoFinal === "teoria" && !contenidoFinal ){
+        if (
+            tipoFinal === "teoria" &&
+            !contenido
+        ) {
+
             return res.status(400).json({
-                msg:"El contenido es obligatorio"
+                msg: "El contenido es obligatorio"
             });
+
         }
 
-        if(titulo){
+        if (tipoFinal === "imagen") {
+
+            if (modoImagen === "url") {
+
+                if (!url) {
+                    return res.status(400).json({
+                        msg: "Debe proporcionar una URL"
+                    });
+                }
+
+                recurso.url = url;
+
+            }
+
+            if (modoImagen === "cloudinary") {
+
+                if (!req.file) {
+                    return res.status(400).json({
+                        msg: "Debe subir una imagen"
+                    });
+                }
+
+                const resultado =
+                    await cloudinary.uploader.upload(
+                        req.file.path,
+                        {
+                            folder: "recursos"
+                        }
+                    );
+
+                recurso.url = resultado.secure_url;
+
+            }
+
+        }
+
+        // ACTUALIZAR DATOS
+        if (titulo)
             recurso.titulo = titulo.trim();
+
+        if (descripcion !== undefined)
+            recurso.descripcion = descripcion.trim();
+
+        if (tipo)
+            recurso.tipo = tipo;
+
+        if (
+            tipoFinal !== "imagen" &&
+            url !== undefined
+        ) {
+            recurso.url = url;
         }
 
-        if(descripcion !== undefined){
-            recurso.descripcion = descripcion.trim() || "";
-        }
+        if (contenido !== undefined)
+            recurso.contenido = contenido.trim();
 
-        if(tipo){ recurso.tipo = tipo; }
+        if (nivelDificultad)
+            recurso.nivelDificultad = nivelDificultad;
 
-        if(url !== undefined){ recurso.url = url; }
-
-        if(contenido !== undefined){
-            recurso.contenido = contenido.trim(); }
-
-        if(nivelDificultad){ recurso.nivelDificultad = nivelDificultad; }
-
-        if(estado !== undefined){ recurso.estado = estado; }
+        if (estado !== undefined)
+            recurso.estado = estado;
 
         await recurso.save();
 
-        const recursoActualizado = await Recurso.findById( recurso._id).populate({
-                path:"tema",
-                populate:{
-                    path:"unidad",
-                    populate:{
-                        path:"materia",
-                        select:"nombre"
+        const recursoActualizado =
+            await Recurso.findById(recurso._id)
+                .populate({
+                    path: "tema",
+                    populate: {
+                        path: "unidad",
+                        populate: {
+                            path: "materia",
+                            select: "nombre"
+                        }
                     }
-                }
-            });
+                });
 
-        res.status(200).json({
-            msg:"Recurso actualizado correctamente",
+        return res.status(200).json({
+
+            msg: "Recurso actualizado correctamente",
+
             recurso: recursoActualizado
+
         });
+
     } catch (error) {
+
         console.log(error);
-        res.status(500).json({
-            msg:"Error al actualizar recurso"
+
+        return res.status(500).json({
+            msg: "Error al actualizar recurso"
         });
+
     }
 
-}
+};
 const cambiarEstadoRecurso = async(req,res)=>{trz
     try {
         const {id} = req.params;

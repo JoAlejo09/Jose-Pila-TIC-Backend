@@ -193,17 +193,24 @@ const cambiarEstadoTema = async(req,res)=>{
 const obtenerTemasPorUnidad = async(req, res) => {
     try {
         const { unidadId } = req.params;
+        const unidad = await Unidad.findById(unidadId);
+        if (!unidad || !unidad.estado){
+            return res.status(404).json({
+                msg:"Unidad no encontrada"
+            })
+        }
+        const filtro = {unidad:unidadId}
+        if(req.query.estado){
+            filtro.estado = req.query.estado === "true";
+        }
+        if(req.query.nivelAcademico){
+            filtro.nivelAcademico = req.query.nivelAcademico;
+        }
+        const temas = await Tema.find(filtro)
+            .populate("unidad", "nombre nivelAcademico")
+            .sort({ orden: 1 });
 
-        const temas = await Tema.find({
-            unidad: unidadId,
-            estado: true
-        })
-        .populate("unidad", "nombre nivelAcademico")
-        .sort({
-            orden: 1
-        });
-
-        res.status(200).json(temas);
+        return res.status(200).json(temas);
     } catch (error) {
         console.log(error);
         res.status(500).json({

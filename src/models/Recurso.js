@@ -18,7 +18,7 @@ const recursoSchema = new mongoose.Schema({
     },
     tipo: {
       type: String,
-      enum: ["pdf", "youtube", "teoria"],
+      enum: ["imagen","pdf", "youtube", "teoria"],
       required: true
     },
 

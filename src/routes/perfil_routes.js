@@ -6,8 +6,7 @@ import upload from "../middlewares/carga_middleware.js";
 const router = Router();
 router.get("/",verificarJWT, obtenerPerfil);
 router.put("/actualizar", verificarJWT, actualizarPerfil)
-router.patch("/foto", verificarJWT, upload.single("imagen"), 
-actualizarFotoPerfil);
+router.patch("/foto", verificarJWT, upload.single("imagen"), actualizarFotoPerfil);
 
 
 export default router;

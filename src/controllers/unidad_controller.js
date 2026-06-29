@@ -218,13 +218,25 @@ const cambiarEstadoUnidad = async (req, res) => {
 const obtenerUnidadesPorMateria = async(req,res)=>{
     try {
         const { materiaId } = req.params;
-        const unidades = await Unidad.find({
-            materia: materiaId,
-            estado: true
-        })
+        const materia = await Materia.findById(materiaId);
+
+        if (!materia || !materia.estado){
+            return res.status(402).json({
+                msg:"Materia no encontrada"
+            })
+        }
+        const filtro = { materia: materiaId}
+        if(req.query.estado){
+            filtro.estado = req.query.estado === "true";
+        }
+        if(req.query.nivelAcademico){
+            filtro.nivelAcademico = req.query.nivelAcademico;
+        }
+
+        const unidades = await Unidad.find(filtro)
         .sort({orden:1});
 
-        res.status(200).json(unidades);
+        return res.status(200).json(unidades);
 
     } catch (error) {
         console.log(error);
