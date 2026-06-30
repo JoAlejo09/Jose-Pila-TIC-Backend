@@ -4,6 +4,7 @@ import Tema from "../models/Tema.js";
 import Unidad from "../models/Unidad.js";
 import { registrarUsoRecurso } from "./progresoacademico_controller.js";
 import cloudinary from "../config/cloudinary.js";
+import { convertirYoutubeAEmbed } from "../utils/youtube.js";
 
 const obtenerRecursos = async(req, res)=>{
     try {
@@ -57,15 +58,24 @@ const crearRecurso = async(req, res)=>{
             });
         }
         let urlRecurso = "";
-        //para pdf o youtube
-        if(tipo === "pdf" || tipo === "youtube"){
+        //para pdf
+        if(tipo === "pdf"){
             if(!url){
-            return res.status(400).json({
-                msg:"La URL es obigatoria"
-            });
+                return res.status(400).json({
+                    msg:"La URL es obligatoria"
+                });
             }
             urlRecurso = url;
         }
+        if(tipo === "youtube"){
+            if(!url){
+                return res.status(400).json({
+                    msg:"La URL es obligatoria"
+                });
+            }
+            urlRecurso = convertirYoutubeAEmbed(url);
+        }
+        // youtube
         if(tipo === "teoria" && !contenido){
             return res.status(400).json({
                 msg:"El contenido es obligatorio"
@@ -184,7 +194,7 @@ const actualizarRecurso = async (req, res) => {
             recurso.tema = tema;
         }
 
-        // VALIDAR TIPO
+        // TIPO FINAL
         const tipoFinal = tipo || recurso.tipo;
 
         const tiposValidos = [
@@ -200,33 +210,29 @@ const actualizarRecurso = async (req, res) => {
             });
         }
 
-        // VALIDAR SEGÚN EL TIPO
+        // VALIDACIONES
 
-        if (
-            (tipoFinal === "pdf" ||
-            tipoFinal === "youtube") &&
-            !url
-        ) {
-
+        if ((tipoFinal === "pdf" || tipoFinal === "youtube") && !url) {
             return res.status(400).json({
                 msg: "La URL es obligatoria"
             });
-
         }
 
-        if (
-            tipoFinal === "teoria" &&
-            !contenido
-        ) {
-
+        if (tipoFinal === "teoria" && !contenido) {
             return res.status(400).json({
                 msg: "El contenido es obligatorio"
             });
-
         }
 
         if (tipoFinal === "imagen") {
 
+            if (!modoImagen) {
+                return res.status(400).json({
+                    msg: "Debe seleccionar el origen de la imagen"
+                });
+            }
+
+            // Imagen mediante URL
             if (modoImagen === "url") {
 
                 if (!url) {
@@ -236,9 +242,9 @@ const actualizarRecurso = async (req, res) => {
                 }
 
                 recurso.url = url;
-
             }
 
+            // Imagen mediante Cloudinary
             if (modoImagen === "cloudinary") {
 
                 if (!req.file) {
@@ -247,21 +253,25 @@ const actualizarRecurso = async (req, res) => {
                     });
                 }
 
-                const resultado =
-                    await cloudinary.uploader.upload(
-                        req.file.path,
-                        {
-                            folder: "recursos"
-                        }
-                    );
+                const resultado = await cloudinary.uploader.upload(
+                    req.file.path,
+                    {
+                        folder: "recursos",
+                        transformation: [
+                            {
+                                quality: "auto",
+                                fetch_format: "auto"
+                            }
+                        ]
+                    }
+                );
 
                 recurso.url = resultado.secure_url;
-
             }
-
         }
 
         // ACTUALIZAR DATOS
+
         if (titulo)
             recurso.titulo = titulo.trim();
 
@@ -271,15 +281,20 @@ const actualizarRecurso = async (req, res) => {
         if (tipo)
             recurso.tipo = tipo;
 
-        if (
-            tipoFinal !== "imagen" &&
-            url !== undefined
-        ) {
+        // PDF
+        if (tipoFinal === "pdf" && url !== undefined) {
             recurso.url = url;
         }
 
-        if (contenido !== undefined)
+        // YOUTUBE
+        if (tipoFinal === "youtube" && url !== undefined) {
+            recurso.url = convertirYoutubeAEmbed(url);
+        }
+
+        // TEORÍA
+        if (contenido !== undefined) {
             recurso.contenido = contenido.trim();
+        }
 
         if (nivelDificultad)
             recurso.nivelDificultad = nivelDificultad;
@@ -289,25 +304,21 @@ const actualizarRecurso = async (req, res) => {
 
         await recurso.save();
 
-        const recursoActualizado =
-            await Recurso.findById(recurso._id)
-                .populate({
-                    path: "tema",
+        const recursoActualizado = await Recurso.findById(recurso._id)
+            .populate({
+                path: "tema",
+                populate: {
+                    path: "unidad",
                     populate: {
-                        path: "unidad",
-                        populate: {
-                            path: "materia",
-                            select: "nombre"
-                        }
+                        path: "materia",
+                        select: "nombre"
                     }
-                });
+                }
+            });
 
         return res.status(200).json({
-
             msg: "Recurso actualizado correctamente",
-
             recurso: recursoActualizado
-
         });
 
     } catch (error) {

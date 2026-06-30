@@ -722,6 +722,11 @@ const resolverCuestionario = async (req, res) => {
                 ) * 100
             ).toFixed(1)
         );
+        const nota = Number(
+            (
+                (correctas/cuestionario.preguntas.length)*10
+            ).toFixed(2)
+        );
 
         // APROBADO
         const aprobado = porcentaje >= 70;
@@ -746,7 +751,7 @@ const resolverCuestionario = async (req, res) => {
             correctas,
             incorrectas,
             sinResponder,
-            puntaje: correctas,
+            puntaje: nota,
             porcentaje,
             nivelResultado,
             aprobado,
