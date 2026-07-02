@@ -3,16 +3,13 @@ import Estudiante from "../models/Estudiante.js";
 
 // Obtener resultados del estudiante
 const obtenerResultadosEstudiante = async (req, res) => {
-
     try {
-
         // OBTENER PERFIL DEL ESTUDIANTE
         const estudiante = await Estudiante.findOne({
             usuario: req.usuario.id
         });
 
         if (!estudiante) {
-
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
@@ -24,14 +21,7 @@ const obtenerResultadosEstudiante = async (req, res) => {
         })
         .populate({
             path: "cuestionario",
-            select: `
-                titulo
-                tipoEvaluacion
-                nivel
-                materia
-                tema
-                createdAt
-            `,
+            select: ` titulo tipoEvaluacion nivel materia tema createdAt`,
             populate: [
                 {
                     path: "materia",
@@ -141,12 +131,7 @@ const obtenerResultadosAdmin = async (req, res) => {
 
     try {
 
-        const {
-            estudiante,
-            materia,
-            tema,
-            nivelAcademico
-        } = req.query;
+        const { estudiante, materia, tema, nivelAcademico} = req.query;
 
         let resultados = await Resultado.find()
             .populate({

@@ -13,35 +13,14 @@ import { generarRecomendacionEstudiante } from "./recomendacion_controller.js";
 //Para crear un cuestionario para evaluar a un estudiante
 const crearCuestionario = async (req, res) => {
     try {
-        let {
-            titulo,
-            descripcion,
-            instrucciones,
-            materia,
-            tema,
-            nivelAcademico,
-            alcanceEvaluacion,
-            tipoEvaluacion,
-            modoGeneracion,
-            preguntas,
-            cantidadPreguntas,
-            tiempoLimite,
-            nivel,
-            aleatorio,
-            mostrarRevision,
-            mostrarRespuestasCorrectas,
-            permitirReintento
-        } = req.body;
+        let { titulo, descripcion, instrucciones, materia, tema, nivelAcademico, alcanceEvaluacion,
+              tipoEvaluacion, modoGeneracion, preguntas, cantidadPreguntas, tiempoLimite, nivel,
+              aleatorio, mostrarRevision, mostrarRespuestasCorrectas, permitirReintento
+            } = req.body;
 
         // VALIDACIONES GENERALES
-        if (
-            !titulo ||
-            !materia ||
-            !nivelAcademico ||
-            !alcanceEvaluacion ||
-            !tipoEvaluacion ||
-            !modoGeneracion ||
-            !cantidadPreguntas
+        if ( !titulo || !materia || !nivelAcademico || !alcanceEvaluacion ||
+             !tipoEvaluacion || !modoGeneracion || !cantidadPreguntas
         ) {
             return res.status(400).json({
                 msg: "Debe completar todos los campos obligatorios"
@@ -90,11 +69,7 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const nivelesValidos = [
-            "1ro BGU",
-            "2do BGU",
-            "3ro BGU"
-        ];
+        const nivelesValidos = [ "1ro BGU", "2do BGU", "3ro BGU" ];
 
         if (!nivelesValidos.includes(nivelAcademico)) {
             return res.status(400).json({
@@ -102,10 +77,7 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const tiposEvaluacion = [
-            "diagnostico",
-            "refuerzo"
-        ];
+        const tiposEvaluacion = [ "diagnostico", "refuerzo" ];
 
         if (!tiposEvaluacion.includes(tipoEvaluacion)) {
             return res.status(400).json({
@@ -113,10 +85,7 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const modosValidos = [
-            "manual",
-            "dinamico"
-        ];
+        const modosValidos = [ "manual", "dinamico"];
 
         if (!modosValidos.includes(modoGeneracion)) {
             return res.status(400).json({
@@ -124,10 +93,7 @@ const crearCuestionario = async (req, res) => {
             });
         }
 
-        const alcancesValidos = [
-            "materia",
-            "tema"
-        ];
+        const alcancesValidos = [ "materia", "tema" ];
 
         if (!alcancesValidos.includes(alcanceEvaluacion)) {
             return res.status(400).json({
@@ -176,8 +142,7 @@ const crearCuestionario = async (req, res) => {
                 })
             }
 
-            if (
-                temaExiste.materia.toString() !==
+            if (temaExiste.materia.toString() !==
                 materia.toString()
             ) {
                 return res.status(400).json({
@@ -185,8 +150,7 @@ const crearCuestionario = async (req, res) => {
                 });
             }
 
-            if (
-                temaExiste.nivelAcademico !==
+            if ( temaExiste.nivelAcademico !==
                 nivelAcademico
             ) {
                 return res.status(400).json({
@@ -196,16 +160,10 @@ const crearCuestionario = async (req, res) => {
         }
 
         // VALIDAR DIFICULTAD
-        const nivelesDificultad = [
-            "facil",
-            "medio",
-            "dificil"
-        ];
-
+        const nivelesDificultad = [ "facil", "medio", "dificil"];
         const nivelFinal = nivel || "medio";
 
-        if (
-            modoGeneracion === "dinamico" &&
+        if ( modoGeneracion === "dinamico" &&
             !nivelesDificultad.includes(nivelFinal)
         ) {
             return res.status(400).json({
@@ -217,7 +175,6 @@ const crearCuestionario = async (req, res) => {
 
         // GENERACIÓN MANUAL
         if (modoGeneracion === "manual") {
-
             if (!preguntas || preguntas.length === 0) {
                 return res.status(400).json({
                     msg: "Debe seleccionar preguntas"
@@ -552,9 +509,7 @@ const verificarDiagnosticoMateria = async (req, res) => {
 const resolverCuestionario = async (req, res) => {
 
     try {
-
         const { id } = req.params;
-
         const { respuestas, tiempoEmpleado } = req.body;
 
         if (!respuestas || respuestas.length === 0) {

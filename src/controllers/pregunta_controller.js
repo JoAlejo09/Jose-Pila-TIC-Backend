@@ -391,8 +391,6 @@ const actualizarPregunta = async(req,res)=>{
     }
 };
 
-
-
 // CAMBIAR ESTADO
 const cambiarEstadoPregunta = async(req,res)=>{
     try {

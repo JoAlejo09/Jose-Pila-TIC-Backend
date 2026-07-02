@@ -1,5 +1,9 @@
 import express from "express";
 import cors from "cors";
+
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./utils/swagger.js"
+
 import userRoutes from "./routes/user_routes.js";
 import authRoutes from "./routes/auth_routes.js";
 import perfilRoutes from "./routes/perfil_routes.js";
@@ -32,6 +36,7 @@ app.use(cors(
 ); //Para permitir solicitudes desde un origen especifico (en este caso, el frontend) y permitir el uso de cookies en las solicitudes.
 
 app.use(express.json()); //Para que el servidor pueda entender los datos en formato JSON
+app.use("/api/docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));  //Para que el servidor pueda mostrar la documentacion de la API en formato Swagger
 
 app.get("/", (req, res) => {
     res.send("Bienvenido a la API para el sistema de refuerzos academicos");
