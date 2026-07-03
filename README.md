@@ -8,7 +8,7 @@ El backend del Sistema Web de Refuerzo Académico proporciona una API RESTful de
 
 El backend se encuentra desplegado en: https://tic-backend-refacademy.onrender.com
 
-Para la documentación completa de la API revise en: 
+Para la documentación completa de la API revise en: https://tic-backend-refacademy.onrender.com/api/docs/
 
 ### Características principales
 
