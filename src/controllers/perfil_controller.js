@@ -5,7 +5,7 @@ import cloudinary from "../config/cloudinary.js";
 
 const obtenerPerfil = async (req, res) => {
     try {
-        const usuario = await Usuario.findById( req.usuario.id).select("-password");
+        const usuario = await Usuario.findById( req.usuario.id).select("-password -token");
         if (!usuario) {
             return res.status(404).json({
                 msg: "Usuario no encontrado"
@@ -17,8 +17,7 @@ const obtenerPerfil = async (req, res) => {
             perfil = await Estudiante.findOne({
                 usuario: usuario._id
             });
-        }
-        if (usuario.rol === "tutor") {
+        }else if (usuario.rol === "tutor") {
             perfil = await Tutor.findOne({
                 usuario: usuario._id
             });
@@ -50,11 +49,21 @@ const actualizarPerfil = async (req, res) => {
         if ( apellido !== undefined && apellido !== "") {
             usuario.apellido = apellido;
         }
+        //validacion nombres y apellidos
+        const regexNombre = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,50}$/;
+        if(!regexNombre.test(nombre.trim())){
+            return res.status(400).json({
+                msg:"El nombre ingresado no es válido"
+            })
+        }
+        if(!regexNombre.test(apellido.trim())){
+            return res.status(400).json({
+                msg:"El apellido ingresado no es válido"
+            })
+        }
         await usuario.save();
         let perfil = null;
-
         if (usuario.rol === "estudiante") {
-
             perfil = await Estudiante.findOne({
                 usuario: usuario._id
             });
@@ -74,10 +83,11 @@ const actualizarPerfil = async (req, res) => {
             if ( fechaNacimiento !== undefined && fechaNacimiento !== "" ) {
                 perfil.fechaNacimiento = fechaNacimiento;
             }
-            if ( institucion !== undefined && institucion !== "" && institucion.trim().length < 3) {
+            if ( institucion !== undefined && institucion !== "" && institucion.trim().length >= 3) {
                 perfil.institucion = institucion;
             }
-            if ( nivelAcademico !== undefined && nivelAcademico !== "" ) {
+            const niveles=[ "1ro BGU", "2do BGU", "3ro BGU"];
+            if( nivelAcademico !== undefined && nivelAcademico !== "" && niveles.includes(nivelAcademico)){
                 perfil.nivelAcademico = nivelAcademico;
             }
             await perfil.save();
