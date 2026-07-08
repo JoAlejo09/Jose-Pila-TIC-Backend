@@ -5,20 +5,24 @@ import Unidad from "../models/Unidad.js"
 const obtenerMaterias = async (req, res) => {
     try {
         const filtro = {};
-
-        if (req.query.nivelAcademico) {
+        const nivelesValidos = [ "1ro BGU", "2do BGU", "3ro BGU" ];
+        if(!nivelesValidos.includes(req.query.nivelAcademico) && req.query.nivelAcademico !== undefined){
+            return res.status(400).json({
+                msg:"Nivel academico invalido"
+            });
+        }
+        if (req.query.nivelAcademico ) {
             filtro.nivelAcademico = req.query.nivelAcademico;
         }
 
-        if (req.query.estado) {
+        if (req.query.estado ) {
             filtro.estado = req.query.estado === "true";
         }
 
         // OBTENER MATERIAS
         const materias = await Materia.find(filtro)
-            .sort({
-                nombre: 1
-            });
+            .select("-__v")
+            .sort({nombre: 1});
 
         // Contar cuantas unidades tiene cada materia
         const materiasConUnidades = await Promise.all(
