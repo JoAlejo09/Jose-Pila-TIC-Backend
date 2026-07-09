@@ -1,6 +1,7 @@
 import Materia from "../models/Materia.js";
 import Tema from "../models/Tema.js";
 import Unidad from "../models/Unidad.js"
+import mongoose from "mongoose";
 
 const obtenerMaterias = async (req, res) => {
     try {
@@ -53,7 +54,14 @@ const obtenerMaterias = async (req, res) => {
 const obtenerMateriaID = async(req,res)=>{
     try {
         const {id} = req.params;
-        const materia = await Materia.findById(id);
+        if(!mongoose.Types.ObjectId.isValid(id)){
+            return res.status(400).json({
+                msg:"ID de materia invalido"
+            });
+        }
+        const materia = await Materia.findById(id)
+            .select("-__v");
+
         if(!materia){
             return res.status(404).json({
                 msg:"Materia no encontrada"
@@ -63,7 +71,7 @@ const obtenerMateriaID = async(req,res)=>{
     } catch (error) {
         console.log(error);
         res.status(500).json({
-            msg:"Error al obtener materia"
+            msg:"Error del servidor al obtener materia"
         });
     }
 }
@@ -83,10 +91,20 @@ const crearMateria = async(req,res)=>{
                 msg:"Nivel academico invalido"
             });
         }
-
+        const nombreLimpio = nombre.trim();
+        if(nombreLimpio.length <3 || nombreLimpio.length > 80){
+            return res.status(400).json({
+                msg: "El nombre de la materia debe tener entre 3 y 80 caracteres"
+            })
+        }
+        if (descripcion && descripcion.trim().length > 500) {
+            return res.status(400).json({
+                msg: "La descripción no debe superar 500 caracteres"
+            });
+        }
         const materiaExiste = await Materia.findOne({
             nombre:{
-                $regex:`^${nombre.trim()}$`,
+                $regex:`^${nombreLimpio}$`,
                 $options:"i"
             },
             nivelAcademico
@@ -105,7 +123,7 @@ const crearMateria = async(req,res)=>{
 
         await nuevaMateria.save();
 
-        res.status(201).json({
+       return res.status(201).json({
             msg: "Materia creada correctamente",
             materia: nuevaMateria
         });
@@ -130,36 +148,59 @@ const actualizarMateria = async (req, res)=>{
         }
 
         if(nombre || nivelAcademico){
+            const nombreFinal = nombre?.trim() || materia.nombre;
+            const nivelFinal = nivelAcademico || materia.nivelAcademico;
+
             const materiaExiste = await Materia.findOne({
                 nombre:{
-                    $regex:`^${(nombre|| materia.nombre).trim()}$`,
+                    $regex:`^${nombreFinal}$`,
                     $options:"i"
                 },
-                nivelAcademico: nivelAcademico || materia.nivelAcademico,
+                nivelAcademico: nivelFinal,
                 _id:{ $ne:id }
             });
+
             if(materiaExiste){
                 return res.status(400).json({
                     msg: "Ya existe una materia con ese nombre y en ese año escolar"
                 });
             }
-        if(nombre !== undefined){ materia.nombre = nombre.trim()}
+        }
+        if( nombre &&
+            (nombre.trim().length < 3 || nombre.trim().length > 80)
+        ){
+            return res.status(400).json({
+                msg:"El nombre debe tener entre 3 y 80 caracteres"
+            });
+        }
+
+        if(descripcion && descripcion.trim().length > 500){
+            return res.status(400).json({
+                msg:"La descripción no puede superar los 500 caracteres"
+            });
+        }
+
+        const nivelesValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
+        if( nivelAcademico && !nivelesValidos.includes(nivelAcademico)){
+            return res.status(400).json({
+                msg:"Nivel académico inválido"
+            });
         }
 
         if(nombre !== undefined){ materia.nombre = nombre.trim()}
-        if(descripcion !== undefined){ materia.descripcion = descripcion; }
+        if(descripcion !== undefined){ materia.descripcion = descripcion?.trim(); }
         if(nivelAcademico !== undefined){ materia.nivelAcademico  = nivelAcademico}
         if(estado !== undefined){ materia.estado = estado; }
 
         await materia.save();
         
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Materia actualizada correctamente",
             materia
         });
     }catch(error){
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al actualizar materia"
         });
     }
@@ -167,6 +208,12 @@ const actualizarMateria = async (req, res)=>{
 const cambiarEstadoMateria = async(req,res) =>{
     try {
         const {id} = req.params;
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({
+                msg: "ID de Materia inválido"
+            });
+        }
+
         const materia = await Materia.findById(id);
         if(!materia){
             return res.status(404).json({
@@ -175,17 +222,17 @@ const cambiarEstadoMateria = async(req,res) =>{
         }
         materia.estado = !materia.estado;
         await materia.save();
-        res.status(200).json({
+        return res.status(200).json({
             msg:`Materia ${
                 materia.estado
                     ? "activada"
                     : "desactivada"
-            } correctamente`,
+            } correctamente.`,
             materia
         })
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al actualizar el estado de la materia"
         });
     }

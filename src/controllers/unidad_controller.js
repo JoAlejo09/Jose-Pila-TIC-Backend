@@ -1,10 +1,31 @@
 import Unidad from "../models/Unidad.js";
 import Materia from "../models/Materia.js";
+import mongoose from "mongoose";
 
 const obtenerUnidades = async (req, res) => {
     try {
+        const { search, materia, nivelAcademico } = req.query;
+        const filtro = {};
 
-        const unidades = await Unidad.find()
+        // Buscar por nombre
+        if (search) {
+            filtro.nombre = {
+                $regex: search,
+                $options: "i"
+            };
+        }
+
+        // Filtrar por materia
+        if (materia) {
+            filtro.materia = materia;
+        }
+
+        // Filtrar por nivel académico
+        if (nivelAcademico) {
+            filtro.nivelAcademico = nivelAcademico;
+        }
+
+        const unidades = await Unidad.find(filtro)
             .populate("materia", "nombre")
             .sort({
                 nivelAcademico: 1,
@@ -12,15 +33,16 @@ const obtenerUnidades = async (req, res) => {
                 createdAt: -1
             });
 
-        res.status(200).json(unidades);
+        return res.status(200).json(unidades);
 
     } catch (error) {
 
         console.log(error);
 
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener unidades"
         });
+
     }
 };
 
