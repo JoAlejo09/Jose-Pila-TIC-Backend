@@ -1,7 +1,7 @@
 import multer from "multer";
 
+//Carga de imagenes de memoria para Cloudinary
 const storage =  multer.diskStorage({});
-
 const upload = multer({
     storage,
     limits: {

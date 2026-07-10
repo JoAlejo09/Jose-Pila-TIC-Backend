@@ -5,7 +5,7 @@ import Unidad from "../models/Unidad.js";
 import { registrarUsoRecurso } from "./progresoacademico_controller.js";
 import cloudinary from "../config/cloudinary.js";
 import { convertirYoutubeAEmbed } from "../utils/youtube.js";
-
+//Obtiene recursos disponibles para admin
 const obtenerRecursos = async(req, res)=>{
     try {
         const recursos = await Recurso.find().populate({
@@ -24,12 +24,12 @@ const obtenerRecursos = async(req, res)=>{
 
     } catch (error) {
         console.log(error);
-
         res.status(500).json({
             msg:"Error al obtener los recursos"
         });
     }
 } 
+//CRUD Recursos solo por el admin
 const crearRecurso = async(req, res)=>{
     try {
         const { tema, titulo, descripcion, tipo, 
@@ -154,17 +154,8 @@ const actualizarRecurso = async (req, res) => {
 
         const { id } = req.params;
 
-        const {
-            tema,
-            titulo,
-            descripcion,
-            tipo,
-            url,
-            contenido,
-            nivelDificultad,
-            estado,
-            modoImagen
-        } = req.body;
+        const { tema, titulo, descripcion, tipo, url, contenido,
+                nivelDificultad, estado, modoImagen } = req.body;
 
         const recurso = await Recurso.findById(id);
 
@@ -174,9 +165,7 @@ const actualizarRecurso = async (req, res) => {
             });
         }
 
-        // VALIDAR TEMA
         if (tema) {
-
             const temaExiste = await Tema.findById(tema);
 
             if (!temaExiste) {
@@ -197,12 +186,7 @@ const actualizarRecurso = async (req, res) => {
         // TIPO FINAL
         const tipoFinal = tipo || recurso.tipo;
 
-        const tiposValidos = [
-            "pdf",
-            "youtube",
-            "teoria",
-            "imagen"
-        ];
+        const tiposValidos = [ "pdf", "youtube", "teoria", "imagen" ];
 
         if (!tiposValidos.includes(tipoFinal)) {
             return res.status(400).json({
@@ -211,7 +195,6 @@ const actualizarRecurso = async (req, res) => {
         }
 
         // VALIDACIONES
-
         if ((tipoFinal === "pdf" || tipoFinal === "youtube") && !url) {
             return res.status(400).json({
                 msg: "La URL es obligatoria"
@@ -225,7 +208,6 @@ const actualizarRecurso = async (req, res) => {
         }
 
         if (tipoFinal === "imagen") {
-
             if (!modoImagen) {
                 return res.status(400).json({
                     msg: "Debe seleccionar el origen de la imagen"
@@ -234,7 +216,6 @@ const actualizarRecurso = async (req, res) => {
 
             // Imagen mediante URL
             if (modoImagen === "url") {
-
                 if (!url) {
                     return res.status(400).json({
                         msg: "Debe proporcionar una URL"
@@ -246,7 +227,6 @@ const actualizarRecurso = async (req, res) => {
 
             // Imagen mediante Cloudinary
             if (modoImagen === "cloudinary") {
-
                 if (!req.file) {
                     return res.status(400).json({
                         msg: "Debe subir una imagen"
@@ -269,8 +249,6 @@ const actualizarRecurso = async (req, res) => {
                 recurso.url = resultado.secure_url;
             }
         }
-
-        // ACTUALIZAR DATOS
 
         if (titulo)
             recurso.titulo = titulo.trim();
@@ -322,9 +300,7 @@ const actualizarRecurso = async (req, res) => {
         });
 
     } catch (error) {
-
         console.log(error);
-
         return res.status(500).json({
             msg: "Error al actualizar recurso"
         });
@@ -353,7 +329,7 @@ const cambiarEstadoRecurso = async(req,res)=>{trz
                 }
             }
         });
-        res.status(200).json({
+        return res.status(200).json({
             msg:`Recurso ${recurso.estado
                 ? "activado"
                 : "desactivado"
@@ -362,15 +338,15 @@ const cambiarEstadoRecurso = async(req,res)=>{trz
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al cambiar estado del recurso"
         })        
     }
 }
+//Obtiene un Recurso unico sea para visualizar o para editarlo
 const obtenerRecursoID = async(req,res)=>{
     try {
         const {id} = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
 
         if(!usuario){
@@ -415,10 +391,10 @@ const obtenerRecursoID = async(req,res)=>{
                 recurso.tipo
             )
         }
-        res.status(200).json(recurso);
+        return res.status(200).json(recurso);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener recurso"
         });
     }

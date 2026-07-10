@@ -13,11 +13,11 @@ const obtenerTemas = async(req,res) =>{
         })
         .sort({orden:1, createdAt:-1});
 
-        res.status(200).json(temas);
+        return res.status(200).json(temas);
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener temas"
         });        
     }
@@ -40,11 +40,11 @@ const obtenerTemaId = async(req,res) =>{
                 msg:"Tema no encontrado"
             })
         }
-        res.status(200).json(tema);
+        return res.status(200).json(tema);
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener el tema"
         })
     };
@@ -52,7 +52,6 @@ const obtenerTemaId = async(req,res) =>{
 const crearTema = async(req,res)=>{
     try {
         const { unidad, nombre, descripcion, orden } = req.body;
-
 
         if( !unidad || !nombre ){
             return res.status(400).json({
@@ -103,14 +102,14 @@ const crearTema = async(req,res)=>{
                                 }
                             })   
 
-        res.status(201).json({
+        return res.status(201).json({
             msg:"Tema creado correctamente",
             tema: temaGuardado
         });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al crear tema"
         });
     }
@@ -148,14 +147,14 @@ const actualizarTema = async(req,res)=>{
                     select:"nombre"
                 }
             });
-        res.status(200).json({
+        return res.status(200).json({
             msg:"Tema actualizado correctamente",
             tema: temaActualizado
         });
         
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al actualizar tema"
         });
     }
@@ -174,7 +173,7 @@ const cambiarEstadoTema = async(req,res)=>{
 
         await tema.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg:`Tema ${
                 tema.estado
                 ? "activado"
@@ -185,7 +184,7 @@ const cambiarEstadoTema = async(req,res)=>{
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al cambiar estado del tema."
         });
     }
@@ -213,7 +212,7 @@ const obtenerTemasPorUnidad = async(req, res) => {
         return res.status(200).json(temas);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener temas"
         });
     }

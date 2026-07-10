@@ -3,6 +3,7 @@ import Estudiante from "../models/Estudiante.js";
 import Tutor from "../models/Tutor.js";
 import cloudinary from "../config/cloudinary.js";
 
+//Obtener el Perfil de cualquier Usuario (admin, tutor, estudiante)
 const obtenerPerfil = async (req, res) => {
     try {
         const usuario = await Usuario.findById( req.usuario.id).select("-password -token");
@@ -22,18 +23,18 @@ const obtenerPerfil = async (req, res) => {
                 usuario: usuario._id
             });
         }
-        res.status(200).json({
+        return res.status(200).json({
             usuario,
             perfil
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener perfil"
         });
     }
 };
-
+//Actualizar el Perfil del usuario
 const actualizarPerfil = async (req, res) => {
     try {
         const usuario = await Usuario.findById( req.usuario.id );
@@ -49,7 +50,7 @@ const actualizarPerfil = async (req, res) => {
         if ( apellido !== undefined && apellido !== "") {
             usuario.apellido = apellido;
         }
-        //validacion nombres y apellidos
+        
         const regexNombre = /^[A-Za-zÁÉÍÓÚáéíóúÑñ\s]{2,50}$/;
         if(!regexNombre.test(nombre.trim())){
             return res.status(400).json({
@@ -97,7 +98,7 @@ const actualizarPerfil = async (req, res) => {
 
             perfil = await Tutor.findOne({ usuario: usuario._id });
 
-            // CREAR PERFIL SI NO EXISTE
+            //En caso de ser nuevo usuario crea el perfil dependiendo su rol
             if (!perfil) {
                 perfil = new Tutor({ usuario: usuario._id });
             }
@@ -123,17 +124,17 @@ const actualizarPerfil = async (req, res) => {
         }
         usuario.perfilCompleto = true;
         await usuario.save();
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Perfil actualizado correctamente"
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al actualizar perfil"
         });
     }
 };
-
+//Actualizacion de foto de perfil mediante cloudinary
 const actualizarFotoPerfil = async (req, res) => {
     try {
         const usuario = await Usuario.findById( req.usuario.id );
@@ -169,13 +170,13 @@ const actualizarFotoPerfil = async (req, res) => {
 
         await usuario.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Foto actualizada correctamente",
             fotoPerfil: resultado.secure_url
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al actualizar foto"
         });
     }

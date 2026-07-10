@@ -244,7 +244,6 @@ const recuperarContrasena = async (req, res) => {
         });
     }
 };
-
 // Comprobar token para recuperar contraseña y activar cuenta
 const comprobarToken = async (req, res) => {
     try{
@@ -311,7 +310,6 @@ const crearNuevoPassword = async (req, res) => {
         });
     }
 };
-
 //Reenviar confirmacion de cuenta
 const reenviarConfirmacion = async (req, res) => {
     try {
@@ -362,7 +360,6 @@ const reenviarConfirmacion = async (req, res) => {
         });
     }
 };
-
 // Cambio Contraseña Obligatorio
 const cambiarPasswordObligatorio = async (req, res) => {
     try {
@@ -406,7 +403,6 @@ const cambiarPasswordObligatorio = async (req, res) => {
     }
 
 };
-
 //Obtener usuarios con busqueda personalizada
 const obtenerUsuarios = async (req, res) => {
     try {
@@ -540,7 +536,6 @@ const crearUsuario = async (req, res) => {
         });
     }
 };
-
 // Actualizar informacion usuario Admin
 const actualizarUsuario = async (req, res) => {
     try {
@@ -609,7 +604,6 @@ const actualizarUsuario = async (req, res) => {
         });
     }
 };
-
 // Dar de baja usuario por Admin
 const desactivarUsuario = async (req, res) => {
     try {
@@ -648,7 +642,6 @@ const desactivarUsuario = async (req, res) => {
         });
     }
 };
-
 //Activar un usuario por admin
 const activarUsuario = async (req, res) => {
     try {
@@ -669,7 +662,7 @@ const activarUsuario = async (req, res) => {
                 msg: "El usuario ya se encuentra activo"
             });
         }
-        
+
         const passwordTemporal = Math.random().toString(36).slice(-8);
 
         usuario.password = await usuario.encryptPassword(passwordTemporal);
@@ -693,5 +686,5 @@ const activarUsuario = async (req, res) => {
     }
 };
 
-
-export { registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, comprobarToken, crearNuevoPassword, reenviarConfirmacion, cambiarPasswordObligatorio, obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario, activarUsuario };
+export { registrarUsuario, confirmarCuenta, loginUsuario, recuperarContrasena, 
+         comprobarToken, crearNuevoPassword, reenviarConfirmacion, cambiarPasswordObligatorio, obtenerUsuarios, crearUsuario, actualizarUsuario, desactivarUsuario, activarUsuario };

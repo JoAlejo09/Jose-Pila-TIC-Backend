@@ -2,24 +2,19 @@ import Pregunta from "../models/Pregunta.js";
 import Materia from "../models/Materia.js";
 import Tema from "../models/Tema.js";
 
-// CREAR PREGUNTA
+// Crear una pregunta para la evaluacion
 const crearPregunta = async(req,res)=>{
     try {
         const { enunciado, tipoPregunta, opciones, respuestaCorrecta, explicacion, materia,
                 tema, nivelAcademico, nivelDificultad, recursoApoyo } = req.body;
 
-
-
-        // VALIDAR CAMPOS OBLIGATORIOS
         if( !enunciado || !tipoPregunta || !respuestaCorrecta ||
             !materia || !tema || !nivelAcademico ){
-
             return res.status(400).json({
                 msg:"Campos obligatorios incompletos"
             });
         }
 
-        // VALIDAR MATERIA
         const materiaExiste = await Materia.findById(materia);
 
         if(!materiaExiste){
@@ -28,7 +23,6 @@ const crearPregunta = async(req,res)=>{
             });
         }
 
-        // VALIDAR TEMA
         const temaExiste = await Tema.findById(tema)
         .populate("unidad")
 
@@ -39,7 +33,6 @@ const crearPregunta = async(req,res)=>{
 
         }
 
-        // VALIDAR NIVEL ACADEMICO
         const nivelesValidos = ["1ro BGU", "2do BGU", "3ro BGU"];
 
         if(!nivelesValidos.includes(nivelAcademico)){
@@ -48,14 +41,13 @@ const crearPregunta = async(req,res)=>{
             });
         }
 
-        // VALIDAR COINCIDENCIA DE NIVEL
         if( temaExiste.unidad.nivelAcademico !== nivelAcademico){
 
             return res.status(400).json({
                 msg:"El nivel académico no coincide con el tema"
             });
         }
-        // OPCIONES
+        
         let opcionesFinales = opciones || [];
 
         // VERDADERO / FALSO
@@ -151,13 +143,12 @@ const crearPregunta = async(req,res)=>{
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al crear pregunta"
         });
     }
 };
-
-// OBTENER PREGUNTAS
+//Obtener preguntas de una materia especifica
 const obtenerPreguntas = async(req,res)=>{
     try {
         const preguntas = await Pregunta.find()
@@ -183,25 +174,18 @@ const obtenerPreguntas = async(req,res)=>{
         return res.status(200).json(preguntas);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener preguntas"
         });
     }
 };
-
-// OBTENER PREGUNTA POR ID
+//Obtener una pregunta para CRUD
 const obtenerPreguntaID = async(req,res)=>{
     try {
         const {id} = req.params;
         const pregunta = await Pregunta.findById(id)
-            .populate(
-                "materia",
-                "nombre"
-            )
-            .populate(
-                "tema",
-                "nombre"
-            );
+            .populate( "materia", "nombre")
+            .populate( "tema", "nombre" );
         if(!pregunta){
             return res.status(404).json({
                 msg:"Pregunta no encontrada"
@@ -211,13 +195,12 @@ const obtenerPreguntaID = async(req,res)=>{
         return res.status(200).json(pregunta);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener pregunta"
         });
     }
 };
-
-// ACTUALIZAR PREGUNTA
+// Actualizar una pregunta
 const actualizarPregunta = async(req,res)=>{
     try {
         const {id} = req.params;
@@ -251,7 +234,6 @@ const actualizarPregunta = async(req,res)=>{
             ||
             tipoFinal === "verdadero_falso"
         ){
-
             opcionesFinales = opcionesFinales.filter(
                 (opcion)=>
                     opcion.texto?.trim() !== ""
@@ -390,8 +372,7 @@ const actualizarPregunta = async(req,res)=>{
         });
     }
 };
-
-// CAMBIAR ESTADO
+// Cambiar de estado la pregunta (activo o desactivado)
 const cambiarEstadoPregunta = async(req,res)=>{
     try {
         const {id} = req.params;
@@ -423,7 +404,5 @@ const cambiarEstadoPregunta = async(req,res)=>{
     }
 
 };
-
-
 
 export { crearPregunta, obtenerPreguntas, obtenerPreguntaID, actualizarPregunta, cambiarEstadoPregunta };

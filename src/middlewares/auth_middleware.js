@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken";
 
+//Token de login
 const verificarJWT = (req,res,next)=>{
     try {
         const authHeader = req.headers.authorization;
@@ -26,21 +27,7 @@ const verificarJWT = (req,res,next)=>{
         });
     }
 };
-/*const verificarRol = (...rolesPermitidos)=>{
-    return (req,res,next)=>{
-        if(!req.usuario){
-            return res.status(401).json({
-                msg:"Usuario no autenticado"
-            });
-        }
-        if( !rolesPermitidos.includes(req.usuario.rol) ){
-            return res.status(403).json({
-                msg:"No tiene permisos para realizar esta acción"
-            });
-        }
-        next();
-    };
-};*/
+//Verificacion el Rol del usuario sea el mismo del endpoint. Garantizando seguridad
 const verificarRol = (...rolesPermitidos)=>{
     return (req,res,next)=>{
 

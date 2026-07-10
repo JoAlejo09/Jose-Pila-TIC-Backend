@@ -46,7 +46,6 @@ const crearTutoria = async(req, res)=>{
         });
     }
 }
-
 //Para que el estudiante pueda ver sus tutorias y solicitudes
 const obtenerMisTutorias = async(req,res)=>{
     try{
@@ -65,7 +64,6 @@ const obtenerMisTutorias = async(req,res)=>{
         });
     }
 }
-
 //Obtener solicitudes pendientes para todos los tutores
 const  obtenerTutoriasPendientes = async(req,res)=>{
     try{
@@ -84,7 +82,6 @@ const  obtenerTutoriasPendientes = async(req,res)=>{
         });
     }
 }
-
 //Para que el tutor pueda aceptar una solicitud de tutoria
 const aceptarTutoria = async(req,res)=>{
     try{
@@ -119,99 +116,66 @@ const aceptarTutoria = async(req,res)=>{
 const editarTutoria = async (req, res) => {
 
     try {
-
         const { id } = req.params;
-
         const tutoria = await Tutoria.findById(id);
 
         if (!tutoria) {
-
             return res.status(404).json({
                 msg: "Tutoría no encontrada"
             });
-
         }
 
-        // VALIDAR PROPIETARIO
-        if (
-            tutoria.estudiante.toString() !== req.usuario.id
-        ) {
-
+        if ( tutoria.estudiante.toString() !== req.usuario.id ) {
             return res.status(403).json({
                 msg: "No autorizado"
             });
 
         }
 
-        // SOLO PENDIENTE
         if (tutoria.estado !== "pendiente") {
-
             return res.status(400).json({
                 msg: "Solo se pueden editar tutorías pendientes"
             });
-
         }
 
-        const {
-            materia,
-            tema,
-            descripcion,
-            modalidad,
-            fecha,
-            duracion
-        } = req.body;
+        const { materia, tema, descripcion, modalidad, fecha, duracion } = req.body;
 
         // ACTUALIZAR CAMPOS
         if (materia !== undefined && materia !== "") {
-
             tutoria.materia = materia;
-
         }
 
         if (tema !== undefined && tema !== "") {
-
             tutoria.tema = tema;
-
         }
 
         if (descripcion !== undefined) {
-
             tutoria.descripcion = descripcion;
-
         }
 
         if (modalidad !== undefined && modalidad !== "") {
-
             tutoria.modalidad = modalidad;
-
         }
 
         if (fecha !== undefined && fecha !== "") {
-
             tutoria.fecha = fecha;
-
         }
 
         if (duracion !== undefined && duracion !== "") {
-
             tutoria.duracion = duracion;
-
         }
 
         await tutoria.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Tutoría actualizada correctamente"
         });
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al editar tutoría"
         });
-
     }
 
 };
@@ -356,7 +320,6 @@ const calificarTutoria = async (req, res) => {
 
     try {
         const { id } = req.params;
-
         const { calificacion, comentarioCalificacion } = req.body;
 
         const tutoria = await Tutoria.findById(id);
@@ -366,11 +329,11 @@ const calificarTutoria = async (req, res) => {
                 msg:"Tutoría no encontrada"
             });
        }
+
         if ( tutoria.estudiante.toString() !== req.usuario.id) {
             return res.status(403).json({
                 msg:"No autorizado"
             });
-
         }
 
         if (tutoria.estado !== "realizada") {
@@ -390,15 +353,13 @@ const calificarTutoria = async (req, res) => {
 
         await tutoria.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg:"Tutoría calificada"
         });
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al calificar tutoría"
         });
 
@@ -410,7 +371,6 @@ const calificarTutoria = async (req, res) => {
 const obtenerTodasTutorias = async (req, res) => {
 
     try {
-
         const tutorias = await Tutoria.find()
         .populate(
             "estudiante",
@@ -423,12 +383,11 @@ const obtenerTodasTutorias = async (req, res) => {
         .sort({
             createdAt:-1
         });
-
-        res.status(200).json(tutorias);
+        return res.status(200).json(tutorias);
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener tutorías"
         });
     }
@@ -438,7 +397,6 @@ const obtenerTodasTutorias = async (req, res) => {
 const cancelarTutoriaAdmin = async (req, res) => {
     try {
         const { id } = req.params;
-
         const tutoria = await Tutoria.findById(id);
 
         if (!tutoria) {
@@ -449,13 +407,13 @@ const cancelarTutoriaAdmin = async (req, res) => {
         }
         tutoria.estado = "cancelada";
         await tutoria.save();
-        res.status(200).json({
+        return res.status(200).json({
             msg:"Tutoría cancelada por administrador"
         });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al cancelar tutoría"
         });
     }

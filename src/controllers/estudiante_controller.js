@@ -6,7 +6,7 @@ import Recurso from "../models/Recurso.js";
 import Resultado from "../models/Resultado.js";
 import Unidad from "../models/Unidad.js";
 
-// COMPLETAR PERFIL DEL ESTUDIANTE
+// Completar el Perfil Estudiante al iniciar por primera vez
 const completarPerfilEstudiante = async (req, res) => {
     try {
         const usuario = await Usuario.findById(req.usuario.id);
@@ -58,24 +58,22 @@ const completarPerfilEstudiante = async (req, res) => {
         }
 
         await estudiante.save();
-
         usuario.perfilCompleto = true;
-
         await usuario.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Perfil completado correctamente",
             perfilCompleto: true,
             estudiante
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al completar perfil"
         });
     }
 };
-// OBTENER PERFIL DEL ESTUDIANTE
+// Obtener el Perfil del Estudiante registrado
 const obtenerPerfilEstudiante = async (req, res) => {
     try {
         const usuario = await Usuario.findById(req.usuario.id);
@@ -104,16 +102,15 @@ const obtenerPerfilEstudiante = async (req, res) => {
                 msg: "Perfil estudiante no encontrado"
             });
         }
-
-        res.status(200).json(estudiante);
+        return res.status(200).json(estudiante);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener perfil"
         });
     }
 };
-// ACTUALIZAR PERFIL DEL ESTUDIANTE
+// Actualizar el perfil del estudiante registrado
 const actualizarPerfilEstudiante = async (req, res) => {
     try {
         const usuario = await Usuario.findById(req.usuario.id);
@@ -164,70 +161,53 @@ const actualizarPerfilEstudiante = async (req, res) => {
 
         await estudiante.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Perfil actualizado correctamente"
         });
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al actualizar perfil"
         });
     }
 };
-// OBTENER MATERIAS DEL ESTUDIANTE
+// Obtener las Materias posibles del estudiante
 const obtenerMateriasEstudiante = async (req, res) => {
-
     try {
-
-        const usuario = await Usuario.findById(
-            req.usuario.id
-        );
+        const usuario = await Usuario.findById( req.usuario.id );
 
         if (!usuario) {
-
             return res.status(404).json({
                 msg: "Usuario no encontrado"
             });
         }
 
         if (usuario.rol !== "estudiante") {
-
             return res.status(403).json({
                 msg: "Acceso solo para estudiantes"
             });
         }
 
         if (!usuario.perfilCompleto) {
-
             return res.status(403).json({
                 msg: "Debe completar su perfil primero",
                 perfilIncompleto: true
             });
         }
-
         const estudiante = await Estudiante.findOne({
             usuario: usuario._id
         });
 
         if (!estudiante) {
-
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
 
-        // OBTENER SOLO MATERIAS DEL NIVEL
-
         const materiasDB = await Materia.find({
-
             estado: true,
-
-            nivelAcademico:
-                estudiante.nivelAcademico
-
+            nivelAcademico: estudiante.nivelAcademico
         }).sort({ nombre: 1 });
-
-        // AGREGAR FAVORITAS
 
         const materias = materiasDB.map(
             (materia) => {
@@ -254,13 +234,10 @@ const obtenerMateriasEstudiante = async (req, res) => {
         const favoritas = materias.filter(
             (materia) => materia.esFavorita
         );
-
         const otras = materias.filter(
             (materia) => !materia.esFavorita
         );
-
         return res.status(200).json({
-
             favoritas,
             otras
         });
@@ -274,7 +251,7 @@ const obtenerMateriasEstudiante = async (req, res) => {
         });
     }
 };
-// AGREGAR MATERIA FAVORITA
+// Agregar una materia a favoritos
 const agregarMateriaFavorita = async (req, res) => {
     try {
         const { id } = req.params;
@@ -287,7 +264,6 @@ const agregarMateriaFavorita = async (req, res) => {
         }
 
         const estudiante = await Estudiante.findOne({ usuario: usuario._id});
-
         if (!estudiante) {
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
@@ -295,7 +271,6 @@ const agregarMateriaFavorita = async (req, res) => {
         }
 
         const materia = await Materia.findById(id);
-
         if (!materia || !materia.estado) {
             return res.status(404).json({
                 msg: "Materia no encontrada"
@@ -306,29 +281,26 @@ const agregarMateriaFavorita = async (req, res) => {
             (materiaId) =>
                 materiaId.toString() === id
         );
-
         if (yaExiste) {
             return res.status(400).json({
                 msg: "La materia ya está en favoritos"
             });
         }
-
         estudiante.materiasPreferidas.push(id);
-
         await estudiante.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Materia agregada a favoritos"
         });
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al agregar favorito"
         });
     }
 };
-// QUITAR MATERIA FAVORITA
+// Quitar Materias de favoritos
 const quitarMateriaFavorita = async (req, res) => {
     try {
         const { id } = req.params;
@@ -338,7 +310,6 @@ const quitarMateriaFavorita = async (req, res) => {
                 msg: "Usuario no encontrado"
             });
         }
-
         const estudiante = await Estudiante.findOne({
             usuario: usuario._id
         });
@@ -357,26 +328,22 @@ const quitarMateriaFavorita = async (req, res) => {
 
         await estudiante.save();
 
-        res.status(200).json({
+        return res.status(200).json({
             msg: "Materia eliminada de favoritos"
         });
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al eliminar favorito"
         });
 
     }
 };
-// OBTENER TEMAS POR MATERIA
+// Obtener Temas de una materia especifica
 const obtenerTemasPorMateria = async (req, res) => {
     try {
-
         const { materiaId } = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
 
         if (!usuario) {
@@ -384,23 +351,19 @@ const obtenerTemasPorMateria = async (req, res) => {
                 msg: "Usuario no encontrado"
             });
         }
-
         if (usuario.rol !== "estudiante") {
             return res.status(403).json({
                 msg: "Acceso solo estudiantes"
             });
         }
-
         const estudiante = await Estudiante.findOne({
             usuario: usuario._id
         });
-
         if (!estudiante) {
             return res.status(404).json({
                 msg: "Perfil estudiante no encontrado"
             });
         }
-
         const materia = await Materia.findById(materiaId);
 
         if (!materia || !materia.estado) {
@@ -408,13 +371,12 @@ const obtenerTemasPorMateria = async (req, res) => {
                 msg: "Materia no encontrada"
             });
         }
-        // OBTENER UNIDADES DE LA MATERIA
+
         const unidades = await Unidad.find({ 
             materia: materiaId, estado: true });
             
         const unidadesIds = unidades.map( (unidad)=> unidad._id );
 
-        // OBTENER TEMAS
         const temasDB = await Tema.find({
             unidad: { $in: unidadesIds },
             nivelAcademico: estudiante.nivelAcademico, 
@@ -428,7 +390,6 @@ const obtenerTemasPorMateria = async (req, res) => {
             }
         })
         .sort({ nombre: 1 });
-
         const temas = temasDB.map((tema)=>{
 
             const esFavorito =
@@ -443,30 +404,26 @@ const obtenerTemasPorMateria = async (req, res) => {
             };
 
         });
-
         const favoritos = temas.filter(
             (tema)=> tema.esFavorito
         );
-
         const otros = temas.filter(
             (tema)=> !tema.esFavorito
         );
-
-        res.status(200).json({
+        return res.status(200).json({
             favoritos,
             otros
         });
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener temas"
         });
 
     }
 };
+//Obtener Temas de una Unidad especifica
 const obtenerTemasPorUnidad = async(req,res)=>{
     try {
         const { unidadId } = req.params;
@@ -532,12 +489,10 @@ const obtenerTemasPorUnidad = async(req,res)=>{
         });
     }
 };
-// OBTENER RECURSOS POR TEMA
+//Obtener los Recursos de un Tema especificos disponibles
 const obtenerRecursosPorTema = async (req, res) => {
     try {
-
         const { temaId } = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
 
         if (!usuario) {
@@ -577,7 +532,6 @@ const obtenerRecursosPorTema = async (req, res) => {
             });
         }
         const nivelMateria = tema.unidad?.materia?.nivelAcademico;
-
         if (nivelMateria !== estudiante.nivelAcademico) {
             return res.status(403).json({
                 msg: "Tema no disponible para su nivel"
@@ -600,23 +554,20 @@ const obtenerRecursosPorTema = async (req, res) => {
         })
         .sort({ createdAt: -1 });
 
-        res.status(200).json(recursos);
+        return res.status(200).json(recursos);
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener recursos"
         });
 
     }
 };
-//OBTENER UN RECURSO DE UN TEMA
+//Obtener un recurso para visualización
 const obtenerRecursoPorId = async(req,res)=>{
     try {
         const {id} = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
 
         if(!usuario){
@@ -662,125 +613,95 @@ const obtenerRecursoPorId = async(req,res)=>{
                 msg:"Recurso no disponible para su nivel"
             });
         }
-        res.status(200).json(recurso);
+        return res.status(200).json(recurso);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al obtener recurso"
         });        
     }
 }
-// AGREGAR TEMA FAVORITO
+// Agregar un tema a favoritos por el estudiante
 const agregarTemaFavorito = async(req,res)=>{
     try {
-
         const {id} = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
-
         if(!usuario){
             return res.status(404).json({
                 msg:"Usuario no encontrado"
             });  
         }
-
         const estudiante = await Estudiante.findOne({
             usuario:usuario._id
         });
-
         if(!estudiante){
             return res.status(404).json({
                 msg:"Perfil estudiante no encontrado"
             });
         }
-
         const tema = await Tema.findById(id);
-
         if(!tema || !tema.estado){
             return res.status(404).json({
                 msg:"Tema no encontrado"
             });
         }
-
-        // SOLUCIÓN
         if(!estudiante.temasPreferidos){
             estudiante.temasPreferidos = [];
         }
-
         const yaExiste = estudiante.temasPreferidos.some(
             (temaId)=> temaId.toString() === id
         );
-
         if(yaExiste){
             return res.status(400).json({
                 msg:"El tema ya está en favoritos"
             });
         }
-
         estudiante.temasPreferidos.push(id);
-
         await estudiante.save();
-
-        res.status(200).json({
+        return res.status(200).json({
             msg:"Tema agregado a favoritos"
         });
-
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al agregar favorito"
         });
-
     }
 };
-// QUITAR TEMA FAVORITO
+// Quitar un tema de favoritos por el estudiante
 const quitarTemaFavorito = async(req,res)=>{
     try {
-
         const {id} = req.params;
-
         const usuario = await Usuario.findById(req.usuario.id);
-
         if(!usuario){
             return res.status(404).json({
                 msg:"Usuario no encontrado"
             });
         }
-
         const estudiante = await Estudiante.findOne({
             usuario:usuario._id
         });
-
         if(!estudiante){
             return res.status(404).json({
                 msg:"Perfil estudiante no encontrado"
             });
         }
-
-        // SOLUCIÓN
         if(!estudiante.temasPreferidos){
             estudiante.temasPreferidos = [];
         }
-
-        estudiante.temasPreferidos =
-            estudiante.temasPreferidos.filter(
-                (temaId)=>
-                    temaId.toString() !== id
-            );
+        estudiante.temasPreferidos = estudiante.temasPreferidos.filter(
+            (temaId)=>
+                temaId.toString() !== id
+        );
 
         await estudiante.save();
-
-        res.status(200).json({
+        return res.status(200).json({
             msg:"Tema eliminado de favoritos"
         });
 
     } catch (error) {
-
         console.log(error);
-
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error al eliminar favorito"
         });
 

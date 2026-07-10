@@ -867,7 +867,7 @@ const verificarAccesoCuestionario = async (req, res) => {
         });
     }
 }
-
+//Actualizacion del cuestionario
 const actualizarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;
@@ -910,8 +910,7 @@ const actualizarCuestionario = async (req, res) => {
         });
     }
 };
-
-// CAMBIAR ESTADO
+//Cambio de estado de un cuestionario (activar o desactivar)
 const eliminarCuestionario = async (req, res) => {
     try {
         const { id } = req.params;
@@ -950,7 +949,6 @@ const eliminarCuestionario = async (req, res) => {
         });
     }
 };
-
 
 export { crearCuestionario, obtenerCuestionarios, obtenerCuestionariosDisponibles, obtenerCuestionarioAdminID,
          verificarDiagnosticoMateria, obtenerCuestionarioResolver, resolverCuestionario, actualizarCuestionario,

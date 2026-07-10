@@ -3,6 +3,7 @@ import Tema from "../models/Tema.js";
 import Unidad from "../models/Unidad.js"
 import mongoose from "mongoose";
 
+//Obtener Materias para administrador
 const obtenerMaterias = async (req, res) => {
     try {
         const filtro = {};
@@ -39,18 +40,19 @@ const obtenerMaterias = async (req, res) => {
             })
         );
 
-        res.status(200).json(
+        return res.status(200).json(
             materiasConUnidades
         );
 
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg: "Error al obtener materias"
         });
     }
 
 };
+//Obtener una Materia especifica 
 const obtenerMateriaID = async(req,res)=>{
     try {
         const {id} = req.params;
@@ -67,14 +69,15 @@ const obtenerMateriaID = async(req,res)=>{
                 msg:"Materia no encontrada"
             });
         }
-        res.status(200).json(materia);
+        return res.status(200).json(materia);
     } catch (error) {
         console.log(error);
-        res.status(500).json({
+        return res.status(500).json({
             msg:"Error del servidor al obtener materia"
         });
     }
 }
+//CRUD Materias
 const crearMateria = async(req,res)=>{
     try {
         const { nombre, descripcion, nivelAcademico} = req.body;
@@ -205,6 +208,7 @@ const actualizarMateria = async (req, res)=>{
         });
     }
 };
+//Dar de baja una Materia cambiando el estado (activo, desactivado)
 const cambiarEstadoMateria = async(req,res) =>{
     try {
         const {id} = req.params;
