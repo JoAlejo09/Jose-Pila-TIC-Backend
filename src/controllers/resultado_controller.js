@@ -15,7 +15,7 @@ const obtenerResultadosEstudiante = async (req, res) => {
         }
 
         const resultados = await Resultado.find({
-            estudiante: estudiante._id
+            estudiante: estudiante.usuario
         })
         .populate({
             path: "cuestionario",
