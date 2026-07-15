@@ -9,9 +9,9 @@ dotenv.config({
 
 const crearAdmin = async () =>{
     try {
-        console.log(process.env.MONGODB_URI_PRODUCTION);
-        await mongoose.connect(process.env.MONGODB_URI_PRODUCTION);        
-        const existe = await Usuario.findOne({email: "alejopila6@gmail.com"});
+        console.log(process.env.MONGODB_URI);
+        await mongoose.connect(process.env.MONGODB_URI);        
+        const existe = await Usuario.findOne({email: "josealejandro_pilavizuete@hotmail.com"});
         if(existe){
             console.log("El admin ya existe")
             process.exit();
@@ -19,8 +19,8 @@ const crearAdmin = async () =>{
         const admin = new Usuario({
             nombre: "Admin",
             apellido: "Principal",
-            email: "alejopila6@gmail.com",
-            password: "123456", // temporal
+            email: "josealejandro_pilavizuete@hotmail.com",
+            password: "ttyEUgm323X1", // temporal
             rol: "admin",
             isVerified: true,
             isActive: true

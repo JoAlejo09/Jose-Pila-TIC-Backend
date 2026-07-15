@@ -427,7 +427,7 @@ const obtenerTemasPorMateria = async (req, res) => {
 const obtenerTemasPorUnidad = async(req,res)=>{
     try {
         const { unidadId } = req.params;
-
+        console.log("ID recibido:", unidadId);
         const usuario = await Usuario.findById(req.usuario.id);
 
         if(!usuario){

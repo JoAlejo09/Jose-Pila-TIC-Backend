@@ -1,5 +1,9 @@
 import Unidad from "../models/Unidad.js";
 import Materia from "../models/Materia.js";
+import Estudiante from "../models/Estudiante.js";
+import Cuestionario from "../models/Cuestionario.js";
+import Resultado from "../models/Resultado.js";
+
 import mongoose from "mongoose";
 
 const obtenerUnidades = async (req, res) => {

@@ -188,30 +188,5 @@ router.patch("/estado/:id", verificarJWT, verificarRol("admin"), cambiarEstadoUn
  *         description: Unidad no encontrada.
  */
 router.get("/materia/:materiaId", verificarJWT, obtenerUnidadesPorMateria);
-/**
- * @swagger
- * /unidades/estudiante/materia/{materiaId}:
- *   get:
- *     summary: Obtener unidades disponibles para un estudiante
- *     description: Devuelve las unidades activas de una materia para el estudiante autenticado. Si existe una evaluación diagnóstica pendiente, solicita completarla antes de permitir el acceso.
- *     tags: [Unidades]
- *     security:
- *       - bearerAuth: []
- *     parameters:
- *       - in: path
- *         name: materiaId
- *         required: true
- *         schema:
- *           type: string
- *         description: ID de la materia.
- *     responses:
- *       200:
- *         description: Unidades obtenidas correctamente.
- *       403:
- *         description: El estudiante debe completar la evaluación diagnóstica.
- *       404:
- *         description: Perfil de estudiante no encontrado.
- */
-router.get("/estudiante/materia/:materiaId",verificarJWT, verificarRol("estudiante"), obtenerUnidadesPorMateriaEstudiante)
 
 export default router;

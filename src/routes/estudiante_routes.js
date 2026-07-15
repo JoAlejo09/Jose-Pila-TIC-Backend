@@ -5,6 +5,7 @@ import { completarPerfilEstudiante, obtenerPerfilEstudiante, actualizarPerfilEst
          obtenerMateriasEstudiante, obtenerTemasPorMateria, obtenerTemasPorUnidad,obtenerRecursosPorTema,
          obtenerRecursoPorId, agregarMateriaFavorita, quitarMateriaFavorita, agregarTemaFavorito, quitarTemaFavorito
 } from "../controllers/estudiante_controller.js";
+import { obtenerUnidadesPorMateriaEstudiante } from "../controllers/unidad_controller.js";
 
 /**
  * @swagger
@@ -189,7 +190,33 @@ router.post("/favoritos/:id", verificarJWT, verificarRol("estudiante"), agregarM
  *         description: Perfil no encontrado.
  */
 router.delete("/favoritos/:id", verificarJWT, verificarRol("estudiante"), quitarMateriaFavorita);
+// UNIDADES
+/**
+ * @swagger
+ * /estudiantes/materia/{materiaId}:
+ *   get:
+ *     summary: Obtener unidades disponibles para un estudiante
+ *     description: Devuelve las unidades activas de una materia para el estudiante autenticado. Si existe una evaluación diagnóstica pendiente, solicita completarla antes de permitir el acceso.
+ *     tags: [Estudiantes]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: materiaId
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: ID de la materia.
+ *     responses:
+ *       200:
+ *         description: Unidades obtenidas correctamente.
+ *       403:
+ *         description: El estudiante debe completar la evaluación diagnóstica.
+ *       404:
+ *         description: Perfil de estudiante no encontrado.
+ */
 
+router.get("/materias/:materiaId/unidades",verificarJWT, verificarRol("estudiante"), obtenerUnidadesPorMateriaEstudiante)
 // TEMAS
 /**
  * @swagger
