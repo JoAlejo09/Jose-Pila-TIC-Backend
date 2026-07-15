@@ -249,7 +249,7 @@ const obtenerUnidadesPorMateriaEstudiante = async(req,res)=>{
 
         if(cuestionarioDiagnostico){
             const resultado = await Resultado.findOne({
-                estudiante:estudiante._id,
+                estudiante:estudiante.usuario,
                 cuestionario:cuestionarioDiagnostico._id
             });
 

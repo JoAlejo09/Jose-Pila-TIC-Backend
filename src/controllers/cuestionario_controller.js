@@ -483,7 +483,7 @@ const verificarDiagnosticoMateria = async (req, res) => {
         }
 
         const resultadoExistente = await Resultado.findOne({
-                estudiante: estudiante._id,
+                estudiante: estudiante.usuario,
                 cuestionario: cuestionarioDiagnostico._id
             });
 
@@ -699,7 +699,7 @@ const resolverCuestionario = async (req, res) => {
         // GUARDAR RESULTADO
 
         const resultado = new Resultado({
-            estudiante: estudiante._id,
+            estudiante: estudiante.usuario,
             cuestionario: id,
             materia: cuestionario.materia,
             respuestas: detalleRespuestas,
@@ -714,6 +714,7 @@ const resolverCuestionario = async (req, res) => {
             temasDebiles,
             temasFuertes
         });
+        console.log(resultado);
 
         await resultado.save();
 
