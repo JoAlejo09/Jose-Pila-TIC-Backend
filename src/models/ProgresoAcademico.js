@@ -4,7 +4,7 @@ const progresoAcademicoSchema = new Schema({
 
     estudiante:{
         type:Schema.Types.ObjectId,
-        ref:"Estudiante",
+        ref:"Usuario",
         required:true,
         unique:true
     },
@@ -46,8 +46,10 @@ const progresoAcademicoSchema = new Schema({
                 type:Schema.Types.ObjectId,
                 ref:"Tema"
             },
-
-            rendimiento:Number
+            correctas:{
+                type:Number,
+                default:0
+            }
         }
     ],
     temasDebiles:[
@@ -57,7 +59,10 @@ const progresoAcademicoSchema = new Schema({
                 ref:"Tema"
             },
 
-            rendimiento:Number
+            incorrectas:{
+                type:Number,
+                default:0
+            }
         }
     ],
     ultimaActividad:{

@@ -87,11 +87,7 @@ const obtenerResultadoPorId = async(req,res)=>{
                 msg:"Resultado no encontrado"
             });
         }
-        if(
-            resultado.estudiante.toString()
-            !==
-            estudiante._id.toString()
-        ){
+        if(resultado.estudiante.toString() !== req.usuario.id){
 
             return res.status(403).json({
                 msg:"No autorizado"
@@ -259,7 +255,7 @@ const obtenerUltimosResultados = async(req,res)=>{
         }
 
         const resultados = await Resultado.find({
-            estudiante:estudiante._id
+            estudiante:estudiante.usuario
         })
         .populate("materia","nombre")
         .populate("cuestionario", "titulo tipoEvaluacion")

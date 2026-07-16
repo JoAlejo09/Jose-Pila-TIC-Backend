@@ -4,10 +4,10 @@ import Recurso from "../models/Recurso.js";
 import Estudiante from "../models/Estudiante.js";
 
 //Funcion interna que evalua los resultados para generar recomendaciones en funcion de Temas
-const generarRecomendacionEstudiante = async (estudianteId) => {
+const generarRecomendacionEstudiante = async (usuarioId) => {
     try {
         const analisis = await AnalisisAcademico.findOne({
-            estudiante: estudianteId
+            estudiante: usuarioId
         });
 
         if (!analisis) {
@@ -61,7 +61,7 @@ const obtenerMisRecomendaciones = async (req, res) => {
       });
     }
     const recomendaciones = await Recomendacion.find({
-      estudiante: estudiante._id,
+      estudiante: req.usuario.id,
       estado: true
     })
       .populate("tema", "nombre")

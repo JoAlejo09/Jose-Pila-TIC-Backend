@@ -720,7 +720,7 @@ const resolverCuestionario = async (req, res) => {
 
         // ACTUALIZAR PROGRESO
         await actualizarProgresoAcademico({
-            estudianteId: estudiante._id,
+            estudianteId: estudiante.usuario,
             tipoEvaluacion: cuestionario.tipoEvaluacion,
             porcentaje,
             aprobado,
@@ -747,7 +747,7 @@ const resolverCuestionario = async (req, res) => {
         // ACTUALIZAR ANALÍTICA
 
         await actualizarAnalisisAcademico({
-            estudianteId: estudiante._id,
+            estudianteId: estudiante.usuario,
             cuestionarioId: cuestionario._id,
             materiaId: cuestionario.materia,
             temas: temasAnalisis
@@ -755,7 +755,7 @@ const resolverCuestionario = async (req, res) => {
 
         // GENERAR RECOMENDACIONES
 
-        await generarRecomendacionEstudiante( estudiante._id );
+        await generarRecomendacionEstudiante( estudiante.usuario );
 
         // RESULTADO DIAGNÓSTICO
 

@@ -1,20 +1,10 @@
 import ProgresoAcademico from "../models/ProgresoAcademico.js";
-import Estudiante from "../models/Estudiante.js";
 
 const obtenerMiProgreso = async (req, res) => {
 
     try {
-        const estudiante = await Estudiante.findOne({
-            usuario: req.usuario.id
-        });
-        if (!estudiante) {
-            return res.status(404).json({
-                msg: "Perfil estudiante no encontrado"
-            });
-        }
-
         const progreso = await ProgresoAcademico.findOne({
-            estudiante: estudiante._id
+            estudiante: req.usuario.id
         })
         .populate("temasFuertes.tema", "nombre")
         .populate("temasDebiles.tema", "nombre");
